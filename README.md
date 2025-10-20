@@ -527,14 +527,6 @@ meal_logs (
 
 ---
 
-## 👥 Team
-
-- **Developer**: David Cruz
-- **Project**: FitMeal-AI for Staffbase Contest
-- **Organization**: Darbcon KMU (https://darbcon.com)
-
----
-
 ## 🤝 Contributing
 
 - **Sponsor**: Fernanda Villanueva
@@ -545,9 +537,9 @@ meal_logs (
 
 ## 📞 Contact
 
-For questions or feedback:
+- **Developer**: David Cruz
 - **Email**: david.cruz.97@hotmail.com
-- **Website**: https://fitmeal.cinturillas247.com
+- **Organization**: Darbcon KMU (https://darbcon.com)
 - **GitHub**: [@davidcruz97](https://github.com/davidcruz97/)
 
 ---

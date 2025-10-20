@@ -1,0 +1,130 @@
+<File_Structure>
+FitMeal-AI/                      
+│
+├── app/
+│   ├── __init__.py
+│   ├── models/
+│   │   ├── user.py
+│   │   ├── ingredient.py
+│   │   ├── recipe.py
+│   │   └── meal_scan.py
+│   │
+│   ├── api/                     # REST API for mobile app
+│   │   ├── auth.py              # JWT authentication
+│   │   ├── scan.py              # Photo upload & detection
+│   │   ├── ingredients.py       # Ingredient endpoints
+│   │   ├── recipes.py           # Recipe endpoints
+│   │   └── meals.py             # Meal logging
+│   │
+│   ├── vision/
+│   │   ├── detector.py          # YOLOv8 detection
+│   │   ├── hybrid_detector.py   # YOLOv8 and Clarifai detection
+│   │   ├── clarifai_detector.py # Clarifai detection
+│   │   ├── ingredient_mapper.py
+│   │   └── models/
+│   │
+│   ├── matching/
+│   │   ├── recipe_matcher.py
+│   │   └── scoring.py
+│   │
+│   ├── text_processing/
+│   │   └── autocomplete.py
+│   │
+│   ├── admin/                   # Web admin panel
+│   │   ├── __init__.py
+│   │   ├── routes.py            # Web routes
+│   │   ├── forms.py             # Recipe forms
+│   │   └── usda_api.py          # USDA integration
+│   │
+│   ├── auth/                    # Web authentication
+│   │   ├── routes.py
+│   │   └── forms.py
+│   │
+│   ├── templates/               # HTML for admin panel
+│   │   ├── base.html
+│   │   ├── auth/
+│   │   ├── admin/
+│   │   │   ├── dashboard.html
+│   │   │   ├── recipes.html
+│   │   │   ├── recipe_create.html
+│   │   │   └── ingredients.html
+│   │   └── errors/
+│   │
+│   ├── static/
+│   │   ├── css/
+│   │   ├── js/
+│   │   └── uploads/
+│   │       ├── recipes/         # Recipe images
+│   │       └── scans/           # User uploaded photos
+│   │
+│   └── utils/
+│       ├── db_init.py
+│       ├── jwt_utils.py         # JWT token handling
+│       ├── image_processing.py
+│       └── validators.py
+│
+├── mobile/
+│   ├── App.js
+│   ├── app.json                     # Expo config
+│   ├── package.json
+│   │
+│   ├── src/
+│   │   ├── api/
+│   │   │   ├── client.js            # Axios instance with JWT
+│   │   │   ├── auth.js              # Auth API calls
+│   │   │   ├── scan.js              # Scan API calls
+│   │   │   ├── recipes.js           # Recipe API calls
+│   │   │   └── ingredients.js       # Ingredient API calls
+│   │   │
+│   │   ├── components/
+│   │   │   ├── IngredientCard.js
+│   │   │   ├── RecipeCard.js
+│   │   │   ├── LoadingSpinner.js
+│   │   │   ├── IngredientList.js
+│   │   │   └── MacroDisplay.js
+│   │   │
+│   │   ├── screens/
+│   │   │   ├── AuthScreen.js        # Login/Register
+│   │   │   ├── HomeScreen.js        # Dashboard
+│   │   │   ├── CameraScreen.js      # Take/upload photo
+│   │   │   ├── ReviewScreen.js      # Review ingredients
+│   │   │   ├── ResultsScreen.js     # Recipe matches
+│   │   │   ├── RecipeDetailScreen.js
+│   │   │   ├── HistoryScreen.js
+│   │   │   └── ProfileScreen.js
+│   │   │
+│   │   ├── navigation/
+│   │   │   └── AppNavigator.js      # React Navigation setup
+│   │   │
+│   │   ├── context/
+│   │   │   ├── AuthContext.js       # Auth state
+│   │   │   └── ScanContext.js       # Scan state
+│   │   │
+│   │   ├── utils/
+│   │   │   ├── storage.js           # AsyncStorage helpers
+│   │   │   ├── imageHelper.js       # Image compression
+│   │   │   └── validators.js
+│   │   │
+│   │   └── constants/
+│   │       ├── colors.js
+│   │       └── config.js            # API URL, etc.
+│   │
+│   ├── assets/
+│   │   ├── images/
+│   │   ├── icons/
+│   │   └── splash.png
+│   │
+│   └── README.md
+│
+│
+├── docs/                      # For contest
+│   ├── ARCHITECTURE.md
+│   ├── SETUP.md
+│   └── API.md
+│
+├── migrations/
+├── config.py
+├── run.py
+├── requirements.txt
+└── .env
+</File_Structure>

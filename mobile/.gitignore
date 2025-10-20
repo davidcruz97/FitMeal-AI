@@ -23,3 +23,6 @@ yarn-error.log
 *.log
 *.tmp
 *.temp
+
+# Dependency directories
+package-lock.json

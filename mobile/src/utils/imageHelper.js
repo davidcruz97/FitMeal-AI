@@ -1,5 +1,4 @@
 import * as ImagePicker from 'expo-image-picker';
-import * as ImageManipulator from 'expo-image-manipulator';
 
 // Request camera permission
 export const requestCameraPermission = async () => {
@@ -63,19 +62,11 @@ export const pickImage = async () => {
   }
 };
 
-// Compress image
+// Compress image (simplified - quality is already handled by ImagePicker)
 export const compressImage = async (uri, quality = 0.7) => {
-  try {
-    const manipResult = await ImageManipulator.manipulateAsync(
-      uri,
-      [{ resize: { width: 1024 } }], // Resize to max width 1024px
-      { compress: quality, format: ImageManipulator.SaveFormat.JPEG }
-    );
-    return manipResult;
-  } catch (error) {
-    console.error('Error compressing image:', error);
-    throw error;
-  }
+  // Image quality is already set in the picker options (0.8)
+  // Return the URI as-is since compression happens during capture
+  return { uri };
 };
 
 // Create form data for image upload

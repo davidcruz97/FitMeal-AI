@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useScan } from '../context/ScanContext';
 import { searchIngredients } from '../api/ingredients';
@@ -89,7 +91,7 @@ const ManualIngredientsScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
@@ -116,7 +118,7 @@ const ManualIngredientsScreen = () => {
         />
       ) : (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>🔍</Text>
+          <FontAwesome5 name="search" size={48} color={Colors.textSecondary} />
           <Text style={styles.emptyText}>
             {searchQuery.length < 2
               ? 'Start typing to search ingredients'
@@ -124,23 +126,26 @@ const ManualIngredientsScreen = () => {
               ? 'Searching...'
               : 'No ingredients found'}
           </Text>
+          {searchQuery.length >= 2 && !searching && searchResults.length === 0 && (
+            <Text style={styles.emptyHint}>
+              Try searching for common ingredients like "chicken", "rice", or "tomato"
+            </Text>
+          )}
         </View>
       )}
 
-      {selectedIngredients.length > 0 && (
-        <View style={styles.footer}>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={handleFindRecipes}
-            disabled={loading}
-          >
-            <Text style={styles.buttonText}>
-              {loading ? 'Finding Recipes...' : `Find Recipes (${selectedIngredients.length})`}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={[styles.button, selectedIngredients.length === 0 && styles.buttonDisabled]}
+          onPress={handleFindRecipes}
+          disabled={loading || selectedIngredients.length === 0}
+        >
+          <Text style={styles.buttonText}>
+            {loading ? 'Finding Recipes...' : selectedIngredients.length > 0 ? `Find Recipes (${selectedIngredients.length})` : 'Select ingredients to find recipes'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 };
 
@@ -231,18 +236,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 40,
-  },
-  emptyIcon: {
-    fontSize: 60,
-    marginBottom: 16,
+    gap: 16,
   },
   emptyText: {
     fontSize: 16,
     color: Colors.textSecondary,
     textAlign: 'center',
   },
+  emptyHint: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
   footer: {
     padding: 20,
+    paddingBottom: 10,
     backgroundColor: Colors.surface,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
@@ -252,6 +262,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
   buttonText: {
     color: Colors.textLight,

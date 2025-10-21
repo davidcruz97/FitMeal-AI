@@ -1,8 +1,8 @@
 import React from 'react';
-import { Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import Colors from '../constants/colors';
 
@@ -53,7 +53,9 @@ const MainTabs = () => {
         name="Home"
         component={HomeScreen}
         options={{
-          tabBarIcon: ({ color }) => <TabIcon emoji="🏠" color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <FontAwesome5 name="home" size={size || 20} color={color} />
+          ),
           title: 'Dashboard',
         }}
       />
@@ -61,7 +63,9 @@ const MainTabs = () => {
         name="Camera"
         component={CameraScreen}
         options={{
-          tabBarIcon: ({ color }) => <TabIcon emoji="📸" color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <FontAwesome5 name="camera" size={size || 20} color={color} solid />
+          ),
           title: 'Scan Ingredients',
         }}
       />
@@ -69,7 +73,9 @@ const MainTabs = () => {
         name="History"
         component={HistoryScreen}
         options={{
-          tabBarIcon: ({ color }) => <TabIcon emoji="📊" color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <FontAwesome5 name="chart-bar" size={size || 20} color={color} />
+          ),
           title: 'Meal History',
         }}
       />
@@ -77,20 +83,15 @@ const MainTabs = () => {
         name="Profile"
         component={ProfileScreen}
         options={{
-          tabBarIcon: ({ color }) => <TabIcon emoji="👤" color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <FontAwesome5 name="user" size={size || 20} color={color} solid />
+          ),
           title: 'Profile',
         }}
       />
     </Tab.Navigator>
   );
 };
-
-// Simple emoji-based tab icon
-const TabIcon = ({ emoji, color }) => (
-  <Text style={{ fontSize: 24, color: color }}>
-    {emoji}
-  </Text>
-);
 
 // Main App Navigator
 const AppNavigator = () => {

@@ -7,6 +7,8 @@ import {
   Alert,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { takePhoto, pickImage } from '../utils/imageHelper';
 import { uploadImageForDetection } from '../api/scan';
@@ -74,7 +76,7 @@ const CameraScreen = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       {selectedImage ? (
         <>
           <View style={styles.previewContainer}>
@@ -102,7 +104,7 @@ const CameraScreen = () => {
       ) : (
         <>
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>📸</Text>
+            <FontAwesome5 name="camera" size={60} color={Colors.primary} />
             <Text style={styles.emptyTitle}>Take a Photo</Text>
             <Text style={styles.emptySubtitle}>
               Capture your ingredients and let AI detect them
@@ -114,7 +116,7 @@ const CameraScreen = () => {
               style={styles.actionButton}
               onPress={handleTakePhoto}
             >
-              <Text style={styles.actionIcon}>📷</Text>
+              <FontAwesome5 name="camera" size={24} color={Colors.primary} style={styles.actionIcon} solid />
               <Text style={styles.actionText}>Take Photo</Text>
             </TouchableOpacity>
 
@@ -122,7 +124,7 @@ const CameraScreen = () => {
               style={styles.actionButton}
               onPress={handlePickImage}
             >
-              <Text style={styles.actionIcon}>🖼️</Text>
+              <FontAwesome5 name="images" size={24} color={Colors.primary} style={styles.actionIcon} />
               <Text style={styles.actionText}>Choose from Gallery</Text>
             </TouchableOpacity>
           </View>
@@ -137,7 +139,7 @@ const CameraScreen = () => {
           </TouchableOpacity>
         </>
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -151,10 +153,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-  },
-  emptyIcon: {
-    fontSize: 80,
-    marginBottom: 20,
+    gap: 16,
   },
   emptyTitle: {
     fontSize: 24,
@@ -180,6 +179,7 @@ const styles = StyleSheet.create({
   },
   actions: {
     padding: 20,
+    paddingBottom: 10,
     gap: 12,
   },
   actionButton: {
@@ -189,10 +189,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: Colors.primary,
   },
   actionIcon: {
-    fontSize: 32,
     marginRight: 16,
   },
   actionText: {

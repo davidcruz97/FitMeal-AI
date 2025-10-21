@@ -10,6 +10,8 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import Colors from '../constants/colors';
 
@@ -67,21 +69,22 @@ const AuthScreen = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContainer}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={styles.header}>
-          <Text style={styles.logo}>🍎</Text>
-          <Text style={styles.title}>FitMeal AI</Text>
-          <Text style={styles.subtitle}>
-            {isLogin ? 'Welcome back!' : 'Create your account'}
-          </Text>
-        </View>
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.header}>
+            <FontAwesome5 name="utensils" size={50} color={Colors.primary} style={styles.logo} />
+            <Text style={styles.title}>FitMeal AI</Text>
+            <Text style={styles.subtitle}>
+              {isLogin ? 'Welcome back!' : 'Create your account'}
+            </Text>
+          </View>
 
         <View style={styles.form}>
           {!isLogin && (
@@ -149,6 +152,7 @@ const AuthScreen = () => {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+  </SafeAreaView>
   );
 };
 
@@ -157,18 +161,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  keyboardView: {
+    flex: 1,
+  },
   scrollContainer: {
     flexGrow: 1,
     justifyContent: 'center',
     padding: 20,
+    paddingBottom: 40,
   },
   header: {
     alignItems: 'center',
     marginBottom: 40,
   },
   logo: {
-    fontSize: 60,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   title: {
     fontSize: 28,

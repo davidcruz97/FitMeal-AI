@@ -8,6 +8,8 @@ import {
   Alert,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import MacroDisplay from '../components/MacroDisplay';
 import Colors from '../constants/colors';
@@ -30,7 +32,7 @@ const RecipeDetailScreen = ({ route }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView style={styles.content}>
         {recipe.image_url && (
           <Image
@@ -43,17 +45,20 @@ const RecipeDetailScreen = ({ route }) => {
         <View style={styles.section}>
           <Text style={styles.title}>{recipe.name}</Text>
           <View style={styles.meta}>
-            <Text style={styles.metaItem}>
-              📁 {recipe.category || 'General'}
-            </Text>
+            <View style={styles.metaItem}>
+              <FontAwesome5 name="folder" size={14} color={Colors.textSecondary} />
+              <Text style={styles.metaText}>{recipe.category || 'General'}</Text>
+            </View>
             {recipe.prep_time_minutes && (
-              <Text style={styles.metaItem}>
-                ⏱️ {recipe.prep_time_minutes} min
-              </Text>
+              <View style={styles.metaItem}>
+                <FontAwesome5 name="clock" size={14} color={Colors.textSecondary} />
+                <Text style={styles.metaText}>{recipe.prep_time_minutes} min</Text>
+              </View>
             )}
-            <Text style={styles.metaItem}>
-              🍽️ {recipe.servings} servings
-            </Text>
+            <View style={styles.metaItem}>
+              <FontAwesome5 name="utensils" size={14} color={Colors.textSecondary} />
+              <Text style={styles.metaText}>{recipe.servings} servings</Text>
+            </View>
           </View>
         </View>
 
@@ -119,7 +124,7 @@ const RecipeDetailScreen = ({ route }) => {
           <Text style={styles.logButtonText}>Log This Meal</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -153,6 +158,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  metaText: {
     fontSize: 14,
     color: Colors.textSecondary,
   },
@@ -210,6 +220,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     padding: 20,
+    paddingBottom: 10,
     backgroundColor: Colors.surface,
     borderTopWidth: 1,
     borderTopColor: Colors.border,

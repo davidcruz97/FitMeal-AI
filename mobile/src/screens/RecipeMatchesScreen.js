@@ -5,6 +5,8 @@ import {
   StyleSheet,
   FlatList,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useScan } from '../context/ScanContext';
 import RecipeCard from '../components/RecipeCard';
@@ -28,18 +30,18 @@ const RecipeMatchesScreen = () => {
 
   if (!matchedRecipes || matchedRecipes.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyIcon}>🍽️</Text>
+      <SafeAreaView style={styles.emptyContainer} edges={['bottom']}>
+        <FontAwesome5 name="utensils" size={60} color={Colors.textSecondary} />
         <Text style={styles.emptyTitle}>No Recipes Found</Text>
         <Text style={styles.emptySubtitle}>
           Try selecting different ingredients or add more to find matching recipes
         </Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.header}>
         <Text style={styles.title}>Matched Recipes</Text>
         <Text style={styles.subtitle}>
@@ -53,7 +55,7 @@ const RecipeMatchesScreen = () => {
         keyExtractor={(item, index) => `${item.recipe.id}-${index}`}
         contentContainerStyle={styles.listContent}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -87,10 +89,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     backgroundColor: Colors.background,
-  },
-  emptyIcon: {
-    fontSize: 80,
-    marginBottom: 20,
+    gap: 20,
   },
   emptyTitle: {
     fontSize: 24,

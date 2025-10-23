@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useScan } from '../context/ScanContext';
 import { matchRecipes } from '../api/recipes';
@@ -46,8 +48,8 @@ const ReviewIngredientsScreen = () => {
 
   if (detectedIngredients.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyIcon}>🔍</Text>
+      <SafeAreaView style={styles.emptyContainer} edges={['bottom']}>
+        <FontAwesome5 name="search" size={60} color={Colors.textSecondary} />
         <Text style={styles.emptyTitle}>No Ingredients Detected</Text>
         <Text style={styles.emptySubtitle}>
           Try taking another photo or add ingredients manually
@@ -58,12 +60,12 @@ const ReviewIngredientsScreen = () => {
         >
           <Text style={styles.buttonText}>Add Manually</Text>
         </TouchableOpacity>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.header}>
         <Text style={styles.title}>Review Ingredients</Text>
         <Text style={styles.subtitle}>
@@ -101,7 +103,7 @@ const ReviewIngredientsScreen = () => {
           </Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -144,6 +146,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     padding: 20,
+    paddingBottom: 10,
     backgroundColor: Colors.surface,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
@@ -168,10 +171,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     backgroundColor: Colors.background,
-  },
-  emptyIcon: {
-    fontSize: 80,
-    marginBottom: 20,
+    gap: 20,
   },
   emptyTitle: {
     fontSize: 24,

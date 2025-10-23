@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { getTodayMeals, getNutritionStats } from '../api/meals';
 import { useAuth } from '../context/AuthContext';
@@ -54,12 +56,13 @@ const HomeScreen = () => {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
+    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.greeting}>Hello, {user?.full_name || 'there'}!</Text>
@@ -116,7 +119,7 @@ const HomeScreen = () => {
           ))
         ) : (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>🍽️</Text>
+            <FontAwesome5 name="utensils" size={48} color={Colors.textSecondary} />
             <Text style={styles.emptyText}>No meals logged yet today</Text>
           </View>
         )}
@@ -130,7 +133,7 @@ const HomeScreen = () => {
             style={styles.actionButton}
             onPress={() => navigation.navigate('Camera')}
           >
-            <Text style={styles.actionIcon}>📸</Text>
+            <FontAwesome5 name="camera" size={32} color={Colors.primary} solid />
             <Text style={styles.actionLabel}>Scan Ingredients</Text>
           </TouchableOpacity>
 
@@ -138,12 +141,13 @@ const HomeScreen = () => {
             style={styles.actionButton}
             onPress={() => navigation.navigate('ManualIngredients')}
           >
-            <Text style={styles.actionIcon}>🔍</Text>
+            <FontAwesome5 name="search" size={32} color={Colors.primary} />
             <Text style={styles.actionLabel}>Search Recipes</Text>
           </TouchableOpacity>
         </View>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
@@ -176,9 +180,12 @@ const MealItem = ({ meal }) => (
 );
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  container: {
+    flex: 1,
   },
   header: {
     padding: 20,
@@ -294,10 +301,7 @@ const styles = StyleSheet.create({
   emptyState: {
     alignItems: 'center',
     paddingVertical: 40,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 12,
+    gap: 12,
   },
   emptyText: {
     fontSize: 16,
@@ -313,10 +317,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 20,
     alignItems: 'center',
-  },
-  actionIcon: {
-    fontSize: 32,
-    marginBottom: 8,
+    gap: 8,
   },
   actionLabel: {
     fontSize: 14,

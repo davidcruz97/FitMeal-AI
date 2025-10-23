@@ -7,16 +7,18 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { logMeal } from '../api/meals';
 import MacroDisplay from '../components/MacroDisplay';
 import Colors from '../constants/colors';
 
 const MEAL_TYPES = [
-  { id: 'breakfast', label: 'Breakfast', icon: '🌅' },
-  { id: 'lunch', label: 'Lunch', icon: '🌞' },
-  { id: 'dinner', label: 'Dinner', icon: '🌙' },
-  { id: 'snack', label: 'Snack', icon: '🍎' },
+  { id: 'breakfast', label: 'Breakfast', icon: 'sun' },
+  { id: 'lunch', label: 'Lunch', icon: 'sun' },
+  { id: 'dinner', label: 'Dinner', icon: 'moon' },
+  { id: 'snack', label: 'Snack', icon: 'apple-alt' },
 ];
 
 const LogMealScreen = ({ route }) => {
@@ -58,7 +60,7 @@ const LogMealScreen = ({ route }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView style={styles.content}>
         <View style={styles.section}>
           <Text style={styles.title}>Log Meal</Text>
@@ -78,7 +80,12 @@ const LogMealScreen = ({ route }) => {
                 ]}
                 onPress={() => setMealType(type.id)}
               >
-                <Text style={styles.mealTypeIcon}>{type.icon}</Text>
+                <FontAwesome5
+                  name={type.icon}
+                  size={28}
+                  color={mealType === type.id ? Colors.primary : Colors.textSecondary}
+                  solid={type.id === 'lunch'}
+                />
                 <Text
                   style={[
                     styles.mealTypeLabel,
@@ -137,7 +144,7 @@ const LogMealScreen = ({ route }) => {
           </Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -184,14 +191,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: Colors.border,
+    gap: 8,
   },
   mealTypeButtonActive: {
     borderColor: Colors.primary,
     backgroundColor: Colors.primaryLight + '20',
-  },
-  mealTypeIcon: {
-    fontSize: 32,
-    marginBottom: 8,
   },
   mealTypeLabel: {
     fontSize: 14,
@@ -231,6 +235,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     padding: 20,
+    paddingBottom: 10,
     backgroundColor: Colors.surface,
     borderTopWidth: 1,
     borderTopColor: Colors.border,

@@ -58,7 +58,9 @@ FitMeal-AI/
 │   │       └── scans/           # User uploaded photos
 │   │
 │   └── utils/
+│       ├── __init__.py
 │       ├── db_init.py
+│       ├── logger.py
 │       ├── jwt_utils.py         # JWT token handling
 │       ├── image_processing.py
 │       └── validators.py

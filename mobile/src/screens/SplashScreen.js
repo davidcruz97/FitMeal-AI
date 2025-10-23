@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { FontAwesome5 } from '@expo/vector-icons';
 import Colors from '../constants/colors';
 
 const SplashScreen = ({ navigation }) => {
@@ -14,7 +15,7 @@ const SplashScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.logo}>🍎</Text>
+      <FontAwesome5 name="apple-alt" size={80} color={Colors.textLight} style={styles.logo} />
       <Text style={styles.title}>FitMeal AI</Text>
       <Text style={styles.subtitle}>
         AI-Powered Meal Planning
@@ -36,7 +37,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
   },
   logo: {
-    fontSize: 80,
     marginBottom: 20,
   },
   title: {

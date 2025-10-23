@@ -1,11 +1,13 @@
 # app/vision/hybrid_detector.py
 """
 Hybrid detector: YOLOv8 (primary) + Clarifai (fallback)
+Improved with proper logging and flexible ingredient matching
 """
 from app.vision.detector import get_detector as get_yolo_detector
 from app.vision.clarifai_detector import get_clarifai_detector
 from app.vision.ingredient_mapper import process_yolo_detections
 from datetime import datetime
+from flask import current_app
 
 
 def detect_ingredients_hybrid(image_path, conf_threshold=0.25):
@@ -23,6 +25,7 @@ def detect_ingredients_hybrid(image_path, conf_threshold=0.25):
         Combined detection results with metadata
     """
     start_time = datetime.now()
+    logger = current_app.logger
     
     results = {
         'detections': [],
@@ -34,7 +37,7 @@ def detect_ingredients_hybrid(image_path, conf_threshold=0.25):
     
     try:
         # Step 1: YOLOv8 Detection (Primary)
-        print("Running YOLOv8 detection...")
+        logger.info("🎯 Starting YOLOv8 detection...")
         yolo_detector = get_yolo_detector()
         yolo_results = yolo_detector.detect_ingredients(
             image_path, 
@@ -49,7 +52,8 @@ def detect_ingredients_hybrid(image_path, conf_threshold=0.25):
         yolo_mapped = process_yolo_detections(yolo_detections)
         yolo_matched = yolo_mapped.get('matched', [])
         
-        print(f"YOLOv8 detected: {len(yolo_detections)} objects, matched: {len(yolo_matched)} ingredients")
+        logger.info(f"✅ YOLOv8: {len(yolo_detections)} objects detected, {len(yolo_matched)} ingredients matched")
+        logger.debug(f"YOLO matched ingredients: {[m['ingredient_name'] for m in yolo_matched]}")
         
         # Step 2: Decide if we need Clarifai fallback
         use_clarifai = False
@@ -70,30 +74,30 @@ def detect_ingredients_hybrid(image_path, conf_threshold=0.25):
         # Step 3: Clarifai Detection (if needed)
         clarifai_matched = []
         if use_clarifai:
-            print(f"Triggering Clarifai fallback: {fallback_reason}")
+            logger.info(f"🔄 Triggering Clarifai fallback: {fallback_reason}")
             
             try:
                 clarifai_detector = get_clarifai_detector()
                 clarifai_results = clarifai_detector.detect_food(
                     image_path,
-                    min_confidence=0.3  # Higher threshold for Clarifai
+                    min_confidence=0.3
                 )
                 
                 clarifai_detections = clarifai_results.get('detections', [])
                 results['clarifai_detections'] = clarifai_detections
                 results['fallback_reason'] = fallback_reason
                 
-                print(f"Clarifai detected: {len(clarifai_detections)} food items")
-                print(f"Clarifai raw detections: {clarifai_detections}")
+                logger.info(f"✅ Clarifai: {len(clarifai_detections)} food items detected")
+                logger.debug(f"Clarifai detections: {[d['class_name'] for d in clarifai_detections]}")
                 
                 # Map Clarifai detections to ingredients
-                clarifai_mapped = map_clarifai_to_ingredients(clarifai_detections)
-                print(f"Clarifai mapped: {len(clarifai_mapped)} ingredients")
-                print(f"Mapped ingredients: {clarifai_mapped}")
-                clarifai_matched = clarifai_mapped
+                clarifai_matched = map_clarifai_to_ingredients(clarifai_detections)
+                
+                logger.info(f"📊 Clarifai mapping: {len(clarifai_matched)} ingredients matched")
+                logger.debug(f"Clarifai matched: {[m['ingredient_name'] for m in clarifai_matched]}")
                 
             except Exception as e:
-                print(f"Clarifai fallback failed: {e}")
+                logger.error(f"❌ Clarifai fallback failed: {e}", exc_info=True)
                 results['clarifai_error'] = str(e)
         
         # Step 4: Merge and deduplicate results
@@ -111,12 +115,13 @@ def detect_ingredients_hybrid(image_path, conf_threshold=0.25):
         else:
             results['strategy_used'] = 'yolo only'
         
-        print(f"Final result: {len(all_matched)} ingredients detected in {processing_time:.0f}ms")
+        logger.info(f"🎉 Detection complete: {len(all_matched)} unique ingredients in {processing_time:.0f}ms")
+        logger.debug(f"Final ingredients: {[d['ingredient_name'] for d in all_matched]}")
         
         return results
         
     except Exception as e:
-        print(f"Hybrid detection error: {e}")
+        logger.error(f"❌ Hybrid detection error: {e}", exc_info=True)
         return {
             'error': str(e),
             'detections': [],
@@ -127,7 +132,7 @@ def detect_ingredients_hybrid(image_path, conf_threshold=0.25):
 
 def map_clarifai_to_ingredients(clarifai_detections):
     """
-    Map Clarifai food detections to database ingredients
+    Map Clarifai food detections to database ingredients with improved matching
     
     Args:
         clarifai_detections: List of Clarifai detection results
@@ -137,41 +142,93 @@ def map_clarifai_to_ingredients(clarifai_detections):
     """
     from app.models.ingredient import Ingredient
     from app import db
+    from flask import current_app
     
+    logger = current_app.logger
     matched = []
+    unmatched = []
+    
+    # Common plural to singular conversions
+    plural_map = {
+        'beets': 'beet',
+        'carrots': 'carrot',
+        'tomatoes': 'tomato',
+        'potatoes': 'potato',
+        'onions': 'onion',
+        'peppers': 'pepper',
+        'mushrooms': 'mushroom',
+        'apples': 'apple',
+        'oranges': 'orange',
+        'bananas': 'banana',
+        'strawberries': 'strawberry',
+        'blueberries': 'blueberry',
+        'raspberries': 'raspberry',
+    }
     
     for detection in clarifai_detections:
         food_name = detection['class_name'].lower().strip()
         confidence = detection['confidence']
+        ingredient = None
+        match_strategy = None
+        
+        logger.debug(f"🔍 Searching for: '{food_name}'")
+        
+        # Normalize: try singular form if plural
+        search_terms = [food_name]
+        if food_name in plural_map:
+            search_terms.append(plural_map[food_name])
         
         # Try multiple search strategies
-        ingredient = None
-        
-        # Strategy 1: Exact word match
-        ingredient = Ingredient.query.filter(
-            db.or_(
-                Ingredient.name.ilike(food_name),
-                Ingredient.name_es.ilike(food_name)
-            ),
-            Ingredient.is_deleted == False
-        ).first()
-        
-        # Strategy 2: Partial match (contains)
-        if not ingredient:
+        for term in search_terms:
+            if ingredient:
+                break
+                
+            # Strategy 1: Exact match
             ingredient = Ingredient.query.filter(
                 db.or_(
-                    Ingredient.name.ilike(f'%{food_name}%'),
-                    Ingredient.name_es.ilike(f'%{food_name}%')
+                    db.func.lower(Ingredient.name) == term,
+                    db.func.lower(Ingredient.name_es) == term
                 ),
                 Ingredient.is_deleted == False
             ).first()
+            if ingredient:
+                match_strategy = "exact"
+                break
+            
+            # Strategy 2: Starts with
+            ingredient = Ingredient.query.filter(
+                db.or_(
+                    db.func.lower(Ingredient.name).like(f'{term}%'),
+                    db.func.lower(Ingredient.name_es).like(f'{term}%')
+                ),
+                Ingredient.is_deleted == False
+            ).first()
+            if ingredient:
+                match_strategy = "starts_with"
+                break
+            
+            # Strategy 3: Contains
+            ingredient = Ingredient.query.filter(
+                db.or_(
+                    db.func.lower(Ingredient.name).like(f'%{term}%'),
+                    db.func.lower(Ingredient.name_es).like(f'%{term}%')
+                ),
+                Ingredient.is_deleted == False
+            ).first()
+            if ingredient:
+                match_strategy = "contains"
+                break
         
-        # Strategy 3: Reverse match (ingredient name contains detection)
+        # Strategy 4: Reverse match (ingredient name contains detection)
         if not ingredient:
-            all_ingredients = Ingredient.query.filter_by(is_deleted=False).all()
-            for ing in all_ingredients:
-                if food_name in ing.name.lower() or food_name in (ing.name_es or '').lower():
-                    ingredient = ing
+            for term in search_terms:
+                all_ingredients = Ingredient.query.filter_by(is_deleted=False).limit(100).all()
+                for ing in all_ingredients:
+                    if term in ing.name.lower() or (ing.name_es and term in ing.name_es.lower()):
+                        ingredient = ing
+                        match_strategy = "reverse_match"
+                        break
+                if ingredient:
                     break
         
         if ingredient:
@@ -183,6 +240,13 @@ def map_clarifai_to_ingredients(clarifai_detections):
                 'source': 'clarifai',
                 'verified': ingredient.is_verified
             })
+            logger.debug(f"  ✓ Matched '{food_name}' → '{ingredient.name}' ({match_strategy})")
+        else:
+            unmatched.append(food_name)
+            logger.warning(f"  ⚠️  No match for '{food_name}'")
+    
+    if unmatched:
+        logger.info(f"⚠️  Unmatched Clarifai detections: {', '.join(unmatched)}")
     
     return matched
 
@@ -199,6 +263,9 @@ def merge_detections(yolo_results, clarifai_results):
     Returns:
         Deduplicated list of ingredients
     """
+    from flask import current_app
+    logger = current_app.logger
+    
     # Use dict to deduplicate by ingredient_id
     merged = {}
     
@@ -214,12 +281,17 @@ def merge_detections(yolo_results, clarifai_results):
         if ingredient_id not in merged:
             # New ingredient, add it
             merged[ingredient_id] = detection
+            logger.debug(f"  + Added new from Clarifai: {detection['ingredient_name']}")
         else:
             # Ingredient already exists, keep higher confidence
             if detection['confidence'] > merged[ingredient_id]['confidence']:
+                old_conf = merged[ingredient_id]['confidence']
                 merged[ingredient_id] = detection
+                logger.debug(f"  ↑ Updated {detection['ingredient_name']}: {old_conf:.2f} → {detection['confidence']:.2f}")
     
     # Sort by confidence (highest first)
     result = sorted(merged.values(), key=lambda x: x['confidence'], reverse=True)
+    
+    logger.info(f"🔗 Merge: YOLO({len(yolo_results)}) + Clarifai({len(clarifai_results)}) = {len(result)} unique")
     
     return result

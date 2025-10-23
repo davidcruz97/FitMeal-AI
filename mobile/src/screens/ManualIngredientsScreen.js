@@ -1,3 +1,4 @@
+// mobile/src/screens/ManualIngredientsScreen.js
 import React, { useState } from 'react';
 import {
   View,
@@ -7,6 +8,7 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -23,9 +25,11 @@ const ManualIngredientsScreen = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleSearch = async (query) => {
     setSearchQuery(query);
+    setError(null);
 
     if (query.length < 2) {
       setSearchResults([]);
@@ -34,10 +38,21 @@ const ManualIngredientsScreen = () => {
 
     setSearching(true);
     try {
+      console.log(`Searching for: "${query}"`);
       const results = await searchIngredients(query, 20);
-      setSearchResults(results.ingredients || []);
+      console.log('Search results:', results);
+      
+      // Handle both 'ingredients' and 'results' keys for compatibility
+      const ingredients = results.ingredients || results.results || [];
+      setSearchResults(ingredients);
+      
+      if (ingredients.length === 0) {
+        setError(`No ingredients found for "${query}". Try a different search term.`);
+      }
     } catch (error) {
       console.error('Search error:', error);
+      setError(error.message || 'Failed to search ingredients. Please try again.');
+      Alert.alert('Search Error', error.message || 'Failed to search ingredients');
     } finally {
       setSearching(false);
     }
@@ -81,7 +96,9 @@ const ManualIngredientsScreen = () => {
           <Text style={[styles.ingredientName, isSelected && styles.textSelected]}>
             {item.name}
           </Text>
-          <Text style={styles.ingredientCategory}>{item.category}</Text>
+          {item.category && (
+            <Text style={styles.ingredientCategory}>{item.category}</Text>
+          )}
         </View>
         <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
           {isSelected && <Text style={styles.checkmark}>✓</Text>}
@@ -91,16 +108,25 @@ const ManualIngredientsScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={[]}>
       <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search ingredients..."
-          value={searchQuery}
-          onChangeText={handleSearch}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
+        <View style={styles.searchInputContainer}>
+          <FontAwesome5 
+            name="search" 
+            size={16} 
+            color={Colors.textSecondary} 
+            style={styles.searchIcon}
+          />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search ingredients (e.g., chicken, rice, tomato)"
+            value={searchQuery}
+            onChangeText={handleSearch}
+            autoCapitalize="none"
+            autoCorrect={false}
+            clearButtonMode="while-editing"
+          />
+        </View>
         {selectedIngredients.length > 0 && (
           <Text style={styles.selectedCount}>
             {selectedIngredients.length} selected
@@ -108,13 +134,23 @@ const ManualIngredientsScreen = () => {
         )}
       </View>
 
+      {error && (
+        <View style={styles.errorContainer}>
+          <FontAwesome5 name="exclamation-circle" size={16} color={Colors.error} />
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
+
       {searchResults.length > 0 ? (
         <FlatList
           data={searchResults}
           renderItem={renderIngredientItem}
           keyExtractor={(item) => item.id.toString()}
           style={styles.list}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: Platform.OS === 'ios' ? 90 : 70 }
+          ]}
         />
       ) : (
         <View style={styles.emptyState}>
@@ -124,9 +160,11 @@ const ManualIngredientsScreen = () => {
               ? 'Start typing to search ingredients'
               : searching
               ? 'Searching...'
+              : error
+              ? ''
               : 'No ingredients found'}
           </Text>
-          {searchQuery.length >= 2 && !searching && searchResults.length === 0 && (
+          {searchQuery.length >= 2 && !searching && searchResults.length === 0 && !error && (
             <Text style={styles.emptyHint}>
               Try searching for common ingredients like "chicken", "rice", or "tomato"
             </Text>
@@ -141,7 +179,7 @@ const ManualIngredientsScreen = () => {
           disabled={loading || selectedIngredients.length === 0}
         >
           <Text style={styles.buttonText}>
-            {loading ? 'Finding Recipes...' : selectedIngredients.length > 0 ? `Find Recipes (${selectedIngredients.length})` : 'Select ingredients to find recipes'}
+            {loading ? 'Finding Recipes...' : selectedIngredients.length > 0 ? `Find Recipes (${selectedIngredients.length})` : 'Select ingredients first'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -160,19 +198,43 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  searchInput: {
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: Colors.background,
     borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
     borderWidth: 1,
     borderColor: Colors.border,
+    paddingHorizontal: 12,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    padding: 14,
+    fontSize: 16,
   },
   selectedCount: {
     marginTop: 8,
     fontSize: 14,
     color: Colors.primary,
     fontWeight: '600',
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.error + '20',
+    padding: 12,
+    marginHorizontal: 20,
+    marginTop: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 14,
+    color: Colors.error,
   },
   list: {
     flex: 1,

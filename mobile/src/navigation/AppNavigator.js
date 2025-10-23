@@ -1,8 +1,10 @@
+// mobile/src/navigation/AppNavigator.js
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { FontAwesome5 } from '@expo/vector-icons';
+import { Platform } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import Colors from '../constants/colors';
 
@@ -32,13 +34,19 @@ const MainTabs = () => {
         tabBarStyle: {
           backgroundColor: Colors.surface,
           borderTopColor: Colors.border,
-          paddingBottom: 5,
-          paddingTop: 5,
-          height: 60,
+          borderTopWidth: 1,
+          // Proper safe area handling for iOS
+          paddingBottom: Platform.OS === 'ios' ? 20 : 8,
+          paddingTop: 8,
+          height: Platform.OS === 'ios' ? 85 : 65,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: '600',
+          marginBottom: Platform.OS === 'ios' ? 0 : 4,
+        },
+        tabBarIconStyle: {
+          marginTop: 4,
         },
         headerStyle: {
           backgroundColor: Colors.primary,
@@ -54,7 +62,7 @@ const MainTabs = () => {
         component={HomeScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <FontAwesome5 name="home" size={size || 20} color={color} />
+            <FontAwesome5 name="home" size={20} color={color} />
           ),
           title: 'Dashboard',
         }}
@@ -64,7 +72,7 @@ const MainTabs = () => {
         component={CameraScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <FontAwesome5 name="camera" size={size || 20} color={color} solid />
+            <FontAwesome5 name="camera" size={20} color={color} solid />
           ),
           title: 'Scan Ingredients',
         }}
@@ -74,7 +82,7 @@ const MainTabs = () => {
         component={HistoryScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <FontAwesome5 name="chart-bar" size={size || 20} color={color} />
+            <FontAwesome5 name="chart-bar" size={20} color={color} />
           ),
           title: 'Meal History',
         }}
@@ -84,7 +92,7 @@ const MainTabs = () => {
         component={ProfileScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <FontAwesome5 name="user" size={size || 20} color={color} solid />
+            <FontAwesome5 name="user" size={20} color={color} solid />
           ),
           title: 'Profile',
         }}

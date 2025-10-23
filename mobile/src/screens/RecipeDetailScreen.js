@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   Image,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -32,7 +33,7 @@ const RecipeDetailScreen = ({ route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={[]}>
       <ScrollView style={styles.content}>
         {recipe.image_url && (
           <Image
@@ -132,6 +133,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+    paddingBottom: Platform.OS === 'ios' ? 90 : 70,
   },
   content: {
     flex: 1,

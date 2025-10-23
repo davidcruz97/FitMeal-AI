@@ -1,3 +1,4 @@
+// mobile/src/screens/HomeScreen.js
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -6,6 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -56,7 +58,7 @@ const HomeScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+    <SafeAreaView style={styles.safeArea} edges={[]}>
       <ScrollView
         style={styles.container}
         refreshControl={
@@ -186,6 +188,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+    paddingBottom: Platform.OS === 'ios' ? 90 : 70,
   },
   header: {
     padding: 20,

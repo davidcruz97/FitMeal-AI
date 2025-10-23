@@ -1,3 +1,4 @@
+// mobile/src/screens/CameraScreen.js
 import React, { useState } from 'react';
 import {
   View,
@@ -6,6 +7,7 @@ import {
   StyleSheet,
   Alert,
   Image,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -76,7 +78,7 @@ const CameraScreen = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.safeArea} edges={[]}>
       {selectedImage ? (
         <>
           <View style={styles.previewContainer}>
@@ -147,6 +149,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+    paddingBottom: Platform.OS === 'ios' ? 90 : 70,
   },
   emptyState: {
     flex: 1,

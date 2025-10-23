@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -65,7 +66,7 @@ const ReviewIngredientsScreen = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={[]}>
       <View style={styles.header}>
         <Text style={styles.title}>Review Ingredients</Text>
         <Text style={styles.subtitle}>
@@ -111,6 +112,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+    paddingBottom: Platform.OS === 'ios' ? 90 : 70,
   },
   header: {
     padding: 20,

@@ -1,5 +1,5 @@
 # app/api/ingredients.py
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db, cache, limiter
 from app.models.ingredient import Ingredient
@@ -22,10 +22,14 @@ def search_ingredients():
     
     Example: GET /api/ingredients/search?q=chick&limit=5
     """
+    logger = current_app.logger
+    
     try:
         query = request.args.get('q', '').strip()
         limit = min(int(request.args.get('limit', 10)), 50)
         verified_only = request.args.get('verified_only', 'false').lower() == 'true'
+        
+        logger.debug(f"🔍 Ingredient search: query='{query}', limit={limit}")
         
         if not query:
             return jsonify({'error': 'Search query (q) is required'}), 400
@@ -47,13 +51,16 @@ def search_ingredients():
         else:
             ingredients = Ingredient.search_by_name(query, limit)
         
+        logger.info(f"✅ Found {len(ingredients)} ingredients for '{query}'")
+        
         return jsonify({
             'query': query,
-            'results': [ing.to_dict(include_nutritional=False) for ing in ingredients],
+            'ingredients': [ing.to_dict(include_nutritional=False) for ing in ingredients],
             'total': len(ingredients)
         }), 200
         
     except Exception as e:
+        logger.error(f"❌ Search failed: {e}", exc_info=True)
         return jsonify({'error': f'Search failed: {str(e)}'}), 500
 
 
@@ -184,6 +191,8 @@ def create_ingredient():
         "fiber_per_100g": 0
     }
     """
+    logger = current_app.logger
+    
     try:
         user_id = int(get_jwt_identity())
         user = User.query.get(user_id)
@@ -215,6 +224,8 @@ def create_ingredient():
         db.session.add(ingredient)
         db.session.commit()
         
+        logger.info(f"✅ Created ingredient: {ingredient.name} (ID: {ingredient.id})")
+        
         # Clear cache
         cache.clear()
         
@@ -225,4 +236,5 @@ def create_ingredient():
         
     except Exception as e:
         db.session.rollback()
+        logger.error(f"❌ Failed to create ingredient: {e}", exc_info=True)
         return jsonify({'error': f'Failed to create ingredient: {str(e)}'}), 500

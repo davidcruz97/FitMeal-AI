@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Alert,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -60,7 +61,7 @@ const LogMealScreen = ({ route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.safeArea} edges={[]}>
       <ScrollView style={styles.content}>
         <View style={styles.section}>
           <Text style={styles.title}>Log Meal</Text>
@@ -152,6 +153,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+    paddingBottom: Platform.OS === 'ios' ? 90 : 70,
   },
   content: {
     flex: 1,

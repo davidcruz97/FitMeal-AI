@@ -1,3 +1,4 @@
+// mobile/src/screens/ProfileScreen.js
 import React from 'react';
 import {
   View,
@@ -6,6 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  Platform,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import Colors from '../constants/colors';
@@ -97,6 +99,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+    paddingBottom: Platform.OS === 'ios' ? 90 : 70,
   },
   header: {
     alignItems: 'center',

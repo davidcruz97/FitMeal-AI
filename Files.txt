@@ -109,6 +109,7 @@ FitMeal-AI/
 │   │   │
 │   │   └── constants/
 │   │       ├── colors.js
+│   │       ├── layout.js
 │   │       └── config.js            # API URL, etc.
 │   │
 │   ├── assets/

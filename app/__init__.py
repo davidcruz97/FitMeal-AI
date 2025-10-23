@@ -10,6 +10,7 @@ from flask_limiter.util import get_remote_address
 from flask_caching import Cache
 from redis import Redis
 from config import config
+from app.utils.logger import setup_logger
 
 # Initialize extensions
 db = SQLAlchemy()
@@ -34,6 +35,9 @@ def create_app(config_name=None):
     
     app = Flask(__name__)
     app.config.from_object(config[config_name])
+    
+    # Setup logging
+    setup_logger(app)
     
     # Initialize extensions with app
     db.init_app(app)

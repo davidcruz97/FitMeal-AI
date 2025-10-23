@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { getMealHistory, getNutritionStats } from '../api/meals';
 import Colors from '../constants/colors';
 
@@ -69,12 +71,13 @@ const HistoryScreen = () => {
   }, {});
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
+    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
       {/* Time Period Selector */}
       <View style={styles.periodSelector}>
         {[7, 14, 30].map((period) => (
@@ -133,12 +136,14 @@ const HistoryScreen = () => {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Total ({days} days)</Text>
         <View style={styles.totalStats}>
-          <Text style={styles.totalItem}>
-            🍽️ {totalStats.meal_count} meals logged
-          </Text>
-          <Text style={styles.totalItem}>
-            🔥 {totalStats.calories.toFixed(0)} total calories
-          </Text>
+          <View style={styles.totalItem}>
+            <FontAwesome5 name="utensils" size={14} color={Colors.text} />
+            <Text style={styles.totalItemText}>{totalStats.meal_count} meals logged</Text>
+          </View>
+          <View style={styles.totalItem}>
+            <FontAwesome5 name="fire" size={14} color={Colors.text} />
+            <Text style={styles.totalItemText}>{totalStats.calories.toFixed(0)} total calories</Text>
+          </View>
         </View>
       </View>
 
@@ -157,12 +162,13 @@ const HistoryScreen = () => {
           ))
         ) : (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>📊</Text>
+            <FontAwesome5 name="chart-bar" size={48} color={Colors.textSecondary} />
             <Text style={styles.emptyText}>No meal history yet</Text>
           </View>
         )}
       </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
@@ -197,9 +203,12 @@ const MealHistoryItem = ({ meal }) => (
 );
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  container: {
+    flex: 1,
   },
   periodSelector: {
     flexDirection: 'row',
@@ -286,9 +295,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   totalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 4,
+  },
+  totalItemText: {
     fontSize: 16,
     color: Colors.text,
-    paddingVertical: 4,
   },
   dateGroup: {
     marginBottom: 20,
@@ -335,10 +349,7 @@ const styles = StyleSheet.create({
   emptyState: {
     alignItems: 'center',
     paddingVertical: 40,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 12,
+    gap: 12,
   },
   emptyText: {
     fontSize: 16,

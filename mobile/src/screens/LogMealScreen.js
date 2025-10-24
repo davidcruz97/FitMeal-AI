@@ -61,7 +61,7 @@ const LogMealScreen = ({ route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={[]}>
+    <SafeAreaView style={styles.container} edges={[]}>
       <ScrollView style={styles.content}>
         <View style={styles.section}>
           <Text style={styles.title}>Log Meal</Text>

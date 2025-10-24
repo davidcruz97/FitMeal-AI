@@ -78,7 +78,7 @@ const CameraScreen = () => {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={[]}>
+    <SafeAreaView style={styles.container} edges={[]}>
       {selectedImage ? (
         <>
           <View style={styles.previewContainer}>

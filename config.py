@@ -70,7 +70,8 @@ class Config:
 class DevelopmentConfig(Config):
     """Development configuration"""
     DEBUG = True
-    SQLALCHEMY_ECHO = True  # Log SQL queries
+    # Set to True only when debugging specific database issues
+    SQLALCHEMY_ECHO = False
 
 
 class ProductionConfig(Config):

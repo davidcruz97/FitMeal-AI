@@ -11,6 +11,7 @@ from flask_caching import Cache
 from redis import Redis
 from config import config
 from app.utils.logger import setup_logger
+import click
 
 # Initialize extensions
 db = SQLAlchemy()
@@ -185,15 +186,19 @@ def register_commands(app):
         from app.models.user import User
         from app.utils.db_init import initialize_database
         
-        print("Initializing database...")
+        click.echo("Initializing database...")
+        app.logger.info("Database initialization started")
         initialize_database()
-        print("✓ Database initialized successfully!")
+        click.echo("✓ Database initialized successfully!")
+        app.logger.info("Database initialization completed")
     
     @app.cli.command()
     def clear_cache():
         """Clear all Redis cache"""
         if redis_client:
             redis_client.flushdb()
-            print("✓ Cache cleared successfully!")
+            click.echo("✓ Cache cleared successfully!")
+            app.logger.info("Redis cache cleared")
         else:
-            print("⚠ Redis not available")
+            click.echo("⚠ Redis not available")
+            app.logger.warning("Redis not available for cache clear")

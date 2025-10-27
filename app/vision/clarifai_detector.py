@@ -6,7 +6,9 @@ import os
 from clarifai_grpc.channel.clarifai_channel import ClarifaiChannel
 from clarifai_grpc.grpc.api import resources_pb2, service_pb2, service_pb2_grpc
 from clarifai_grpc.grpc.api.status import status_code_pb2
+import logging
 
+logger = logging.getLogger(__name__)
 
 class ClarifaiDetector:
     """Clarifai food detection"""
@@ -28,7 +30,7 @@ class ClarifaiDetector:
         self.model_id = 'food-item-recognition'
         self.model_version_id = None  
         
-        print("✓ Clarifai detector initialized")
+        logger.info("✓ Clarifai detector initialized")
     
     def detect_food(self, image_path, min_confidence=0.5):
         """
@@ -94,7 +96,7 @@ class ClarifaiDetector:
             }
             
         except Exception as e:
-            print(f"Clarifai detection error: {e}")
+            logger.error(f"Clarifai detection error: {e}")
             return {
                 'error': str(e),
                 'detections': [],

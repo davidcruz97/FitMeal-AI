@@ -21,8 +21,14 @@ def setup_logger(app):
         - Set LOG_LEVEL=DEBUG in .env for development (verbose troubleshooting)
     """
     
+    # This prevents duplicate setup in multi-worker environments
+    for handler in app.logger.handlers:
+        if isinstance(handler, RotatingFileHandler):
+            # Already configured with our file handler
+            return app.logger
+    
     # Create logs directory
-    log_dir = 'logs'
+    log_dir = '/var/log/fitmeal'
     os.makedirs(log_dir, exist_ok=True)
     
     # Determine log level from environment
@@ -32,7 +38,10 @@ def setup_logger(app):
     # Set Flask app logger level
     app.logger.setLevel(log_level)
     
-    # Remove default handlers
+    # CRITICAL: Disable propagation to prevent duplicate logs
+    app.logger.propagate = False
+    
+    # Remove any default Flask handlers
     app.logger.handlers.clear()
     
     # Create formatters based on log level
@@ -49,12 +58,6 @@ def setup_logger(app):
             datefmt='%Y-%m-%d %H:%M:%S'
         )
     
-    # Console Handler
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(log_level)
-    console_handler.setFormatter(formatter)
-    app.logger.addHandler(console_handler)
-    
     # Single File Handler - All logs in one place
     log_file = os.path.join(log_dir, 'fitmeal.log')
     file_handler = RotatingFileHandler(
@@ -66,11 +69,16 @@ def setup_logger(app):
     file_handler.setFormatter(formatter)
     app.logger.addHandler(file_handler)
     
-    # Startup message
+    # Silence SQLAlchemy echo in production
+    if os.getenv('FLASK_ENV') == 'production':
+        logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
+    
+    # Startup message (only once per worker)
     app.logger.info("=" * 80)
     app.logger.info(f"🚀 FitMeal-AI Started - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     app.logger.info(f"Environment: {os.getenv('FLASK_ENV', 'development')}")
     app.logger.info(f"Log Level: {log_level_str} ({'Verbose Mode' if log_level == logging.DEBUG else 'Essential Mode'})")
+    app.logger.info(f"Worker PID: {os.getpid()}")
     app.logger.info("=" * 80)
     
     return app.logger

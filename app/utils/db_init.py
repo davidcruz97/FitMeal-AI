@@ -6,12 +6,14 @@ from datetime import datetime
 from app import db
 from app.models.user import User
 from app.models.ingredient import Ingredient
-
+import logging
+logger = logging.getLogger(__name__)
 
 def initialize_database():
     """Initialize database with essential data"""
     
     print("Creating database tables...")
+    logger.info("Creating database tables...")
     db.create_all()
     
     # Check if admin already exists

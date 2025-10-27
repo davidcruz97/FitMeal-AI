@@ -6,6 +6,9 @@ from PIL import Image
 import cv2
 import numpy as np
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 class IngredientDetector:
     """YOLOv8-based ingredient detector"""
@@ -37,10 +40,10 @@ class IngredientDetector:
             # Restore original torch.load
             torch.load = original_load
             
-            print(f"✓ YOLOv8 model loaded from {self.model_path}")
+            logger.info(f"✓ YOLOv8 model loaded from {self.model_path}")
             
         except Exception as e:
-            print(f"✗ Failed to load YOLOv8 model: {e}")
+            logger.error(f"Failed to load YOLOv8 model: {e}")
             raise
     
     def detect_ingredients(self, image_path, conf_threshold=0.25, max_det=10):

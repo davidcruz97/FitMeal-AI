@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from werkzeug.utils import secure_filename
 from app import db, limiter
@@ -83,11 +83,11 @@ def upload_scan():
                 
                 # Run hybrid detection (YOLOv8 + Clarifai)
                 detection_results = detect_ingredients_hybrid(filepath)
-                print(f"DEBUG: Detection results = {detection_results}")
+                current_app.logger.debug(f"Detection results: {detection_results}")
                 
                 # Get detected ingredients
                 detected_ingredients = detection_results.get('detections', [])
-                print(f"DEBUG: Detected ingredients = {detected_ingredients}")
+                current_app.logger.debug(f"Detected ingredients: {detected_ingredients}")
                 
                 # Store in scan record
                 scan.detected_ingredients = detected_ingredients
@@ -99,7 +99,7 @@ def upload_scan():
             except Exception as e:
                 scan.processing_status = 'failed'
                 scan.error_message = str(e)
-                print(f"Detection error: {e}")
+                current_app.logger.error(f"Detection error: {e}")
         
         db.session.commit()
         

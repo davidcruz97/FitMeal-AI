@@ -581,6 +581,9 @@ def usda_import(fdc_id):
     from app.admin.usda_api import usda_api
     
     try:
+        # Get current user ID from JWT token
+        current_user_id = get_jwt_identity()
+        
         # Get ingredient data from USDA
         ingredient_data = usda_api.import_to_ingredient(fdc_id)
         
@@ -615,7 +618,7 @@ def usda_import(fdc_id):
             existing.sodium_per_100g = ingredient_data.get('sodium_per_100g')
             existing.usda_fdc_id = fdc_id
             existing.is_verified = True
-            existing.verified_by_id = current_user.id
+            existing.verified_by_id = current_user_id
             
             db.session.commit()
             
@@ -637,7 +640,7 @@ def usda_import(fdc_id):
                 sodium_per_100g=ingredient_data.get('sodium_per_100g'),
                 usda_fdc_id=fdc_id,
                 is_verified=True,
-                verified_by_id=current_user.id
+                verified_by_id=current_user_id
             )
             
             db.session.add(ingredient)

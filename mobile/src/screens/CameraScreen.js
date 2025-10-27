@@ -1,5 +1,5 @@
 // mobile/src/screens/CameraScreen.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,9 +20,18 @@ import LoadingSpinner from '../components/LoadingSpinner';
 
 const CameraScreen = () => {
   const navigation = useNavigation();
-  const { updateScan } = useScan();
+  const { updateScan, resetScan } = useScan();
   const [selectedImage, setSelectedImage] = useState(null);
   const [uploading, setUploading] = useState(false);
+
+  // 🔄 Reset everything when you come to Camera screen
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      resetScan(); // Clear all previous data
+      setSelectedImage(null); // Clear preview image
+    });
+    return unsubscribe;
+  }, [navigation, resetScan]);
 
   const handleTakePhoto = async () => {
     try {

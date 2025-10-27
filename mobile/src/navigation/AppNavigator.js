@@ -35,10 +35,9 @@ const MainTabs = () => {
           backgroundColor: Colors.surface,
           borderTopColor: Colors.border,
           borderTopWidth: 1,
-          // Proper safe area handling for iOS
-          paddingBottom: Platform.OS === 'ios' ? 20 : 8,
+          paddingBottom: Platform.OS === 'ios' ? 30 : 12,
           paddingTop: 8,
-          height: Platform.OS === 'ios' ? 85 : 65,
+          height: Platform.OS === 'ios' ? 95 : 70,
         },
         tabBarLabelStyle: {
           fontSize: 11,

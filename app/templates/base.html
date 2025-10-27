@@ -28,12 +28,12 @@
                 <span>Dashboard</span>
             </a>
 
-            <a href="{{ url_for('admin.list_recipes') }}" class="nav-item {% if 'recipe' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('admin.recipes') }}" class="nav-item {% if 'recipe' in request.endpoint %}active{% endif %}">
                 <i class="fas fa-book-open"></i>
                 <span>Recipes</span>
             </a>
 
-            <a href="{{ url_for('admin.list_ingredients') }}" class="nav-item {% if 'ingredient' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('admin.ingredients') }}" class="nav-item {% if 'ingredient' in request.endpoint %}active{% endif %}">
                 <i class="fas fa-carrot"></i>
                 <span>Ingredients</span>
             </a>

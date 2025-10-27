@@ -4,6 +4,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_tok
 from werkzeug.utils import secure_filename
 from app.admin import bp
 from app import db
+from app.admin.forms import RecipeForm, IngredientForm
 from app.models.user import User
 from app.models.ingredient import Ingredient
 from app.models.recipe import Recipe
@@ -54,7 +55,7 @@ def login():
         else:
             flash('Invalid credentials or insufficient permissions', 'error')
     
-    return render_template('admin/login.html')
+    return render_template('auth/login.html')
 
 
 @bp.route('/logout')
@@ -95,21 +96,42 @@ def dashboard():
     
     logger.info(f"📊 Admin dashboard accessed | Recipes: {total_recipes} | Ingredients: {total_ingredients}")
     
+    # Create stats dictionary for the template
+    stats = {
+        'total_users': total_users,
+        'total_recipes': total_recipes,
+        'published_recipes': published_recipes,
+        'total_ingredients': total_ingredients,
+        'verified_ingredients': verified_ingredients
+    }
+    
     return render_template('admin/dashboard.html',
-                         total_recipes=total_recipes,
-                         published_recipes=published_recipes,
-                         total_ingredients=total_ingredients,
-                         verified_ingredients=verified_ingredients,
-                         total_users=total_users,
+                         stats=stats,
                          recent_recipes=recent_recipes,
                          popular_recipes=popular_recipes)
 
+# ==================== USER MANAGEMENT ====================
+
+@bp.route('/users')
+@admin_required
+def users():
+    """List all users"""
+    page = request.args.get('page', 1, type=int)
+    
+    query = User.get_active_query().filter_by(user_type='user')
+    query = query.order_by(User.created_at.desc())
+    
+    pagination = query.paginate(page=page, per_page=20, error_out=False)
+    
+    return render_template('admin/users.html',
+                         users=pagination.items,
+                         pagination=pagination)
 
 # ==================== RECIPE MANAGEMENT ====================
 
 @bp.route('/recipes')
 @admin_required
-def list_recipes():
+def recipes():
     """List all recipes with filtering"""
     page = request.args.get('page', 1, type=int)
     category = request.args.get('category', '')
@@ -127,7 +149,7 @@ def list_recipes():
     
     pagination = query.paginate(page=page, per_page=20, error_out=False)
     
-    return render_template('admin/recipes/list.html',
+    return render_template('admin/recipes.html',
                          recipes=pagination.items,
                          pagination=pagination,
                          category=category,
@@ -136,7 +158,7 @@ def list_recipes():
 
 @bp.route('/recipes/create', methods=['GET', 'POST'])
 @admin_required
-def create_recipe():
+def recipe_create():
     """Create new recipe"""
     logger = current_app.logger
     from flask import session
@@ -159,7 +181,7 @@ def create_recipe():
             # Validation
             if not name or not instructions:
                 flash('Recipe name and instructions are required', 'error')
-                return redirect(url_for('admin.create_recipe'))
+                return redirect(url_for('admin.recipe_create'))
             
             # Create recipe
             recipe = Recipe(
@@ -174,12 +196,12 @@ def create_recipe():
                 difficulty=difficulty,
                 tags=tags or None,
                 created_by_id=session['user_id'],
-                is_verified=True,  # Nutritionist recipes are auto-verified
+                is_verified=True,
                 is_published=is_published
             )
             
             db.session.add(recipe)
-            db.session.flush()  # Get recipe ID
+            db.session.flush()
             
             # Add ingredients
             ingredient_ids = request.form.getlist('ingredient_id[]')
@@ -202,43 +224,52 @@ def create_recipe():
             
             db.session.commit()
             
-            logger.info(f"✅ Recipe created: {name} (ID: {recipe.id}) by user {session['user_email']}")
+            logger.info(f"✅ Recipe created: {name} (ID: {recipe.id})")
             flash(f'Recipe "{name}" created successfully!', 'success')
             
-            return redirect(url_for('admin.view_recipe', recipe_id=recipe.id))
+            return redirect(url_for('admin.recipe_view', recipe_id=recipe.id))
             
         except Exception as e:
             db.session.rollback()
             logger.error(f"❌ Failed to create recipe: {e}", exc_info=True)
             flash(f'Error creating recipe: {str(e)}', 'error')
-            return redirect(url_for('admin.create_recipe'))
+            return redirect(url_for('admin.recipe_create'))
     
     # GET request - show form
     ingredients = Ingredient.get_active_query().order_by(Ingredient.name).all()
-    return render_template('admin/recipes/create.html', ingredients=ingredients)
+    form = RecipeForm()
+    return render_template('admin/recipe_form.html', 
+                         recipe=None,
+                         form=form,
+                         ingredients=ingredients)
 
 
 @bp.route('/recipes/<int:recipe_id>')
 @admin_required
-def view_recipe(recipe_id):
+def recipe_view(recipe_id):
     """View recipe details"""
     recipe = Recipe.query.get_or_404(recipe_id)
     
     if recipe.is_deleted:
         flash('Recipe not found', 'error')
-        return redirect(url_for('admin.list_recipes'))
+        return redirect(url_for('admin.recipes'))
     
     # Calculate nutritional info
     nutritional_info = recipe.calculate_macros()
     
-    return render_template('admin/recipes/view.html',
-                         recipe=recipe,
-                         nutritional_info=nutritional_info)
+    ingredients = Ingredient.get_active_query().order_by(Ingredient.name).all()
+    
+    return render_template('admin/recipe_form.html',
+                     recipe=recipe,
+                     nutritional_info=nutritional_info,
+                     ingredients=ingredients,
+                     form=None,
+                     view_mode=True)
 
 
 @bp.route('/recipes/<int:recipe_id>/edit', methods=['GET', 'POST'])
 @admin_required
-def edit_recipe(recipe_id):
+def recipe_edit(recipe_id):
     """Edit existing recipe"""
     logger = current_app.logger
     from flask import session
@@ -247,7 +278,7 @@ def edit_recipe(recipe_id):
     
     if recipe.is_deleted:
         flash('Recipe not found', 'error')
-        return redirect(url_for('admin.list_recipes'))
+        return redirect(url_for('admin.recipes'))
     
     if request.method == 'POST':
         try:
@@ -288,10 +319,10 @@ def edit_recipe(recipe_id):
             
             db.session.commit()
             
-            logger.info(f"✅ Recipe updated: {recipe.name} (ID: {recipe.id}) by {session['user_email']}")
+            logger.info(f"✅ Recipe updated: {recipe.name} (ID: {recipe.id})")
             flash(f'Recipe "{recipe.name}" updated successfully!', 'success')
             
-            return redirect(url_for('admin.view_recipe', recipe_id=recipe.id))
+            return redirect(url_for('admin.recipe_view', recipe_id=recipe.id))
             
         except Exception as e:
             db.session.rollback()
@@ -300,14 +331,16 @@ def edit_recipe(recipe_id):
     
     # GET request - show form
     ingredients = Ingredient.get_active_query().order_by(Ingredient.name).all()
-    return render_template('admin/recipes/edit.html',
+    form = RecipeForm(obj=recipe)
+    return render_template('admin/recipe_form.html',
                          recipe=recipe,
+                         form=form,
                          ingredients=ingredients)
 
 
 @bp.route('/recipes/<int:recipe_id>/delete', methods=['POST'])
 @admin_required
-def delete_recipe(recipe_id):
+def recipe_delete(recipe_id):
     """Delete (soft delete) recipe"""
     logger = current_app.logger
     from flask import session
@@ -318,7 +351,7 @@ def delete_recipe(recipe_id):
         recipe_name = recipe.name
         recipe.soft_delete()
         
-        logger.info(f"🗑️  Recipe deleted: {recipe_name} (ID: {recipe_id}) by {session['user_email']}")
+        logger.info(f"🗑️  Recipe deleted: {recipe_name} (ID: {recipe_id})")
         flash(f'Recipe "{recipe_name}" deleted successfully', 'success')
         
     except Exception as e:
@@ -326,7 +359,7 @@ def delete_recipe(recipe_id):
         logger.error(f"❌ Failed to delete recipe {recipe_id}: {e}", exc_info=True)
         flash(f'Error deleting recipe: {str(e)}', 'error')
     
-    return redirect(url_for('admin.list_recipes'))
+    return redirect(url_for('admin.recipes'))
 
 
 @bp.route('/recipes/<int:recipe_id>/toggle-publish', methods=['POST'])
@@ -347,14 +380,14 @@ def toggle_publish_recipe(recipe_id):
         db.session.rollback()
         flash(f'Error: {str(e)}', 'error')
     
-    return redirect(url_for('admin.view_recipe', recipe_id=recipe_id))
+    return redirect(url_for('admin.recipe_view', recipe_id=recipe_id))
 
 
 # ==================== INGREDIENT MANAGEMENT ====================
 
 @bp.route('/ingredients')
 @admin_required
-def list_ingredients():
+def ingredients():
     """List all ingredients"""
     page = request.args.get('page', 1, type=int)
     category = request.args.get('category', '')
@@ -377,59 +410,114 @@ def list_ingredients():
     
     pagination = query.paginate(page=page, per_page=50, error_out=False)
     
-    return render_template('admin/ingredients/list.html',
-                         ingredients=pagination.items,
-                         pagination=pagination,
-                         category=category,
-                         search=search)
+    return render_template('admin/ingredients.html',
+                     ingredients=pagination.items,
+                     pagination=pagination,
+                     category=category,
+                     search=search,
+                     form=IngredientForm())
 
 
-@bp.route('/ingredients/create', methods=['GET', 'POST'])
+@bp.route('/ingredients/create', methods=['POST'])
 @admin_required
-def create_ingredient():
+def ingredient_create():
     """Create new ingredient"""
     logger = current_app.logger
     from flask import session
     
-    if request.method == 'POST':
-        try:
-            name = request.form.get('name', '').strip()
-            name_es = request.form.get('name_es', '').strip()
-            category = request.form.get('category', 'other')
-            
-            if not name:
-                flash('Ingredient name is required', 'error')
-                return redirect(url_for('admin.create_ingredient'))
-            
-            ingredient = Ingredient(
-                name=name,
-                name_es=name_es or None,
-                category=category,
-                calories_per_100g=float(request.form.get('calories_per_100g', 0)),
-                protein_per_100g=float(request.form.get('protein_per_100g', 0)),
-                carbs_per_100g=float(request.form.get('carbs_per_100g', 0)),
-                fats_per_100g=float(request.form.get('fats_per_100g', 0)),
-                fiber_per_100g=float(request.form.get('fiber_per_100g') or 0) or None,
-                yolo_detectable=request.form.get('yolo_detectable') == 'on',
-                yolo_class_name=request.form.get('yolo_class_name', '').strip() or None,
-                is_verified=True,
-                verified_by_id=session['user_id']
-            )
-            
-            db.session.add(ingredient)
-            db.session.commit()
-            
-            logger.info(f"✅ Ingredient created: {name} (ID: {ingredient.id})")
-            flash(f'Ingredient "{name}" created successfully!', 'success')
-            
-            return redirect(url_for('admin.list_ingredients'))
-            
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"❌ Failed to create ingredient: {e}", exc_info=True)
-            flash(f'Error creating ingredient: {str(e)}', 'error')
+    try:
+        name = request.form.get('name', '').strip()
+        name_es = request.form.get('name_es', '').strip()
+        category = request.form.get('category', 'other')
+        
+        if not name:
+            flash('Ingredient name is required', 'error')
+            return redirect(url_for('admin.ingredients'))
+        
+        ingredient = Ingredient(
+            name=name,
+            name_es=name_es or None,
+            category=category,
+            calories_per_100g=float(request.form.get('calories_per_100g', 0)),
+            protein_per_100g=float(request.form.get('protein_per_100g', 0)),
+            carbs_per_100g=float(request.form.get('carbs_per_100g', 0)),
+            fats_per_100g=float(request.form.get('fats_per_100g', 0)),
+            fiber_per_100g=float(request.form.get('fiber_per_100g') or 0) or None,
+            yolo_detectable=request.form.get('yolo_detectable') == 'on',
+            yolo_class_name=request.form.get('yolo_class_name', '').strip() or None,
+            is_verified=True,
+            verified_by_id=session['user_id']
+        )
+        
+        db.session.add(ingredient)
+        db.session.commit()
+        
+        logger.info(f"✅ Ingredient created: {name} (ID: {ingredient.id})")
+        flash(f'Ingredient "{name}" created successfully!', 'success')
+        
+        return redirect(url_for('admin.ingredients'))
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"❌ Failed to create ingredient: {e}", exc_info=True)
+        flash(f'Error creating ingredient: {str(e)}', 'error')
+        return redirect(url_for('admin.ingredients'))
+
+
+@bp.route('/ingredients/<int:ingredient_id>/update', methods=['POST'])
+@admin_required
+def ingredient_update(ingredient_id):
+    """Update existing ingredient"""
+    logger = current_app.logger
     
-    return render_template('admin/ingredients/create.html')
+    ingredient = Ingredient.query.get_or_404(ingredient_id)
+    
+    try:
+        ingredient.name = request.form.get('name', '').strip()
+        ingredient.name_es = request.form.get('name_es', '').strip() or None
+        ingredient.category = request.form.get('category', 'other')
+        ingredient.calories_per_100g = float(request.form.get('calories_per_100g', 0))
+        ingredient.protein_per_100g = float(request.form.get('protein_per_100g', 0))
+        ingredient.carbs_per_100g = float(request.form.get('carbs_per_100g', 0))
+        ingredient.fats_per_100g = float(request.form.get('fats_per_100g', 0))
+        ingredient.fiber_per_100g = float(request.form.get('fiber_per_100g') or 0) or None
+        ingredient.yolo_detectable = request.form.get('yolo_detectable') == 'on'
+        ingredient.yolo_class_name = request.form.get('yolo_class_name', '').strip() or None
+        
+        db.session.commit()
+        
+        logger.info(f"✅ Ingredient updated: {ingredient.name} (ID: {ingredient_id})")
+        flash(f'Ingredient "{ingredient.name}" updated successfully!', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"❌ Failed to update ingredient {ingredient_id}: {e}", exc_info=True)
+        flash(f'Error updating ingredient: {str(e)}', 'error')
+    
+    return redirect(url_for('admin.ingredients'))
+
+
+@bp.route('/ingredients/<int:ingredient_id>/delete', methods=['POST'])
+@admin_required
+def ingredient_delete(ingredient_id):
+    """Delete (soft delete) ingredient"""
+    logger = current_app.logger
+    
+    ingredient = Ingredient.query.get_or_404(ingredient_id)
+    
+    try:
+        ingredient_name = ingredient.name
+        ingredient.soft_delete()
+        
+        logger.info(f"🗑️  Ingredient deleted: {ingredient_name} (ID: {ingredient_id})")
+        flash(f'Ingredient "{ingredient_name}" deleted successfully', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"❌ Failed to delete ingredient {ingredient_id}: {e}", exc_info=True)
+        flash(f'Error deleting ingredient: {str(e)}', 'error')
+    
+    return redirect(url_for('admin.ingredients'))
 
 
 # ==================== API HELPERS (AJAX) ====================
@@ -501,7 +589,7 @@ def usda_import(fdc_id):
         existing = Ingredient.query.filter_by(name=ingredient_data['name']).first()
         if existing and not existing.is_deleted:
             flash(f'Ingredient "{ingredient_data["name"]}" already exists!', 'warning')
-            return redirect(url_for('admin.list_ingredients'))
+            return redirect(url_for('admin.ingredients'))
 
         # Create ingredient
         ingredient = Ingredient(
@@ -514,7 +602,7 @@ def usda_import(fdc_id):
 
         logger.info(f"✅ USDA ingredient imported: {ingredient.name} (FDC ID: {fdc_id})")
         flash(f'Successfully imported "{ingredient.name}" from USDA!', 'success')
-        return redirect(url_for('admin.list_ingredients'))
+        return redirect(url_for('admin.ingredients'))
 
     except Exception as e:
         db.session.rollback()

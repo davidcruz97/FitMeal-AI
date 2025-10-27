@@ -43,6 +43,8 @@ FitMeal-AI/
 │   ├── templates/               # HTML for admin panel
 │   │   ├── base.html
 │   │   ├── auth/
+│   │   │   └── login.html
+│   │   │
 │   │   ├── admin/
 │   │   │   ├── dashboard.html
 │   │   │   ├── recipes.html

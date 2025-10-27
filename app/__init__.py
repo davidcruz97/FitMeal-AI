@@ -95,12 +95,11 @@ def create_app(config_name=None):
           
         # Admin Web Panel Blueprints
         try:
-            # from app.admin import routes as admin_routes
-            # from app.auth import routes as auth_routes
+            from app.admin import routes as admin_routes
+            app.register_blueprint(admin_routes.bp, url_prefix='/admin')
 
+            # from app.auth import routes as auth_routes
             # app.register_blueprint(auth_routes.bp, url_prefix='/auth')
-            # app.register_blueprint(admin_routes.bp, url_prefix='/admin')
-            pass  # Placeholder for future implementation
         except Exception as e:
             app.logger.warning(f"Could not register admin blueprints: {e}")
         

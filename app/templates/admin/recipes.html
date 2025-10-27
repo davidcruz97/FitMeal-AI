@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Recipes - FitMeal AI Admin{% endblock %}
+{% block page_title %}Recipe Management{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fas fa-book-open"></i>
+            All Recipes
+        </h3>
+        <a href="{{ url_for('admin.recipe_create') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i>
+            Add New Recipe
+        </a>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="search-bar">
+        <input
+            type="text"
+            id="recipeSearch"
+            class="search-input"
+            placeholder="Search recipes by name, category, or ingredients..."
+            onkeyup="searchTable('recipeSearch', 'recipeTable')"
+        >
+        <select class="form-control" style="max-width: 200px;" onchange="filterByCategory(this.value)">
+            <option value="">All Categories</option>
+            {% for category in categories %}
+            <option value="{{ category }}">{{ category }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Recipes Table -->
+    <div class="table-container">
+        <table id="recipeTable">
+            <thead>
+                <tr>
+                    <th>Image</th>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Prep Time</th>
+                    <th>Servings</th>
+                    <th>Ingredients</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for recipe in recipes %}
+                <tr data-category="{{ recipe.category or 'none' }}">
+                    <td>
+                        {% if recipe.image_url %}
+                        <img src="{{ recipe.image_url }}" alt="{{ recipe.name }}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">
+                        {% else %}
+                        <div style="width: 60px; height: 60px; background-color: var(--primary-light); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-utensils" style="color: var(--primary-color);"></i>
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td><strong>{{ recipe.name }}</strong></td>
+                    <td>
+                        {% if recipe.category %}
+                        <span class="badge badge-primary">{{ recipe.category }}</span>
+                        {% else %}
+                        <span class="badge" style="background-color: #f5f5f5; color: #999;">Uncategorized</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if recipe.prep_time_minutes %}
+                        <i class="fas fa-clock"></i> {{ recipe.prep_time_minutes }} min
+                        {% else %}
+                        N/A
+                        {% endif %}
+                    </td>
+                    <td>
+                        <i class="fas fa-utensils"></i> {{ recipe.servings or 1 }}
+                    </td>
+                    <td>
+                        <span class="badge badge-success">{{ recipe.ingredients|length }} items</span>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <a href="{{ url_for('admin.recipe_view', recipe_id=recipe.id) }}" class="btn btn-sm btn-info btn-icon" title="View">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{{ url_for('admin.recipe_edit', recipe_id=recipe.id) }}" class="btn btn-sm btn-secondary btn-icon" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form action="{{ url_for('admin.recipe_delete', recipe_id=recipe.id) }}" method="POST" style="display: inline;" onsubmit="return confirmDelete('Are you sure you want to delete {{ recipe.name }}?')">
+                                <button type="submit" class="btn btn-sm btn-danger btn-icon" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7">
+                        <div class="empty-state">
+                            <i class="fas fa-book-open"></i>
+                            <h3>No Recipes Found</h3>
+                            <p>Start by adding your first recipe</p>
+                            <a href="{{ url_for('admin.recipe_create') }}" class="btn btn-primary" style="margin-top: 20px;">
+                                <i class="fas fa-plus"></i>
+                                Add Recipe
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function filterByCategory(category) {
+    const rows = document.querySelectorAll('#recipeTable tbody tr');
+    rows.forEach(row => {
+        if (!category || row.dataset.category === category || row.dataset.category === 'none' && category === 'Uncategorized') {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+</script>
+{% endblock %}

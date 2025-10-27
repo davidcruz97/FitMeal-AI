@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}USDA Database - FitMeal AI Admin{% endblock %}
+{% block page_title %}USDA Food Database{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fas fa-search"></i>
+            Search USDA Food Database
+        </h3>
+        <a href="{{ url_for('admin.ingredients') }}" class="btn btn-outline">
+            <i class="fas fa-arrow-left"></i>
+            Back to Ingredients
+        </a>
+    </div>
+
+    <div style="background-color: var(--info-color); color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+        <i class="fas fa-info-circle"></i>
+        Search the USDA FoodData Central database to import ingredients with accurate nutritional data.
+    </div>
+
+    <!-- Search Form -->
+    <form method="GET" action="{{ url_for('admin.usda_search') }}" style="margin-bottom: 30px;">
+        <div class="search-bar">
+            <input
+                type="text"
+                name="query"
+                class="search-input"
+                placeholder="Search for food items (e.g., chicken breast, brown rice, spinach)..."
+                value="{{ query or '' }}"
+                required
+            >
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-search"></i>
+                Search
+            </button>
+        </div>
+    </form>
+
+    <!-- Search Results -->
+    {% if results %}
+    <h4 style="margin-bottom: 20px; color: var(--text-primary);">
+        <i class="fas fa-list"></i>
+        Search Results ({{ results|length }})
+    </h4>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Food Name</th>
+                    <th>Category</th>
+                    <th>Brand</th>
+                    <th>Nutritional Info</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for food in results %}
+                <tr>
+                    <td><strong>{{ food.description }}</strong></td>
+                    <td>
+                        {% if food.foodCategory %}
+                        <span class="badge badge-primary">{{ food.foodCategory }}</span>
+                        {% else %}
+                        <span class="badge" style="background-color: #f5f5f5; color: #999;">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ food.brandName or 'Generic' }}</td>
+                    <td>
+                        {% if food.foodNutrients %}
+                        <small>
+                            {% for nutrient in food.foodNutrients[:4] %}
+                                <span style="margin-right: 10px;">
+                                    <strong>{{ nutrient.nutrient.name }}:</strong> {{ "%.1f"|format(nutrient.amount) }}{{ nutrient.nutrient.unitName }}
+                                </span>
+                            {% endfor %}
+                        </small>
+                        {% else %}
+                        N/A
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form method="POST" action="{{ url_for('admin.usda_import', fdc_id=food.fdcId) }}" style="display: inline;">
+                            <button type="submit" class="btn btn-sm btn-success">
+                                <i class="fas fa-download"></i>
+                                Import
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% elif query %}
+    <div class="empty-state">
+        <i class="fas fa-search"></i>
+        <h3>No Results Found</h3>
+        <p>Try searching with different keywords or check your spelling</p>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-search"></i>
+        <h3>Start Searching</h3>
+        <p>Enter a food item name above to search the USDA database</p>
+        <div style="margin-top: 20px; text-align: left; max-width: 500px;">
+            <h4 style="color: var(--text-primary); margin-bottom: 10px;">Popular Searches:</h4>
+            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                {% for term in ['chicken breast', 'brown rice', 'spinach', 'salmon', 'broccoli', 'avocado', 'eggs', 'almonds'] %}
+                <a href="{{ url_for('admin.usda_search', query=term) }}" class="badge badge-primary" style="padding: 8px 15px; text-decoration: none;">
+                    {{ term }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% if error %}
+<div class="card" style="border-left: 4px solid var(--danger-color); background-color: #ffebee;">
+    <p style="color: var(--danger-color); margin: 0;">
+        <i class="fas fa-exclamation-circle"></i>
+        <strong>Error:</strong> {{ error }}
+    </p>
+</div>
+{% endif %}
+{% endblock %}

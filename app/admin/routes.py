@@ -455,3 +455,69 @@ def api_search_ingredients():
         'name': ing.name,
         'category': ing.category
     } for ing in ingredients])
+
+# ==================== USDA INTEGRATION ====================
+
+@bp.route('/usda/search')
+@admin_required
+def usda_search():
+    """Search USDA food database"""
+    from app.admin.usda_api import usda_api
+    
+    query = request.args.get('query', '')
+    results = []
+    error = None
+
+    if query:
+        try:
+            results = usda_api.search_foods(query)
+        except ValueError as e:
+            error = str(e)
+        except Exception as e:
+            error = f"Error searching USDA database: {str(e)}"
+
+    return render_template('admin/usda_search.html',
+                           query=query,
+                           results=results,
+                           error=error)
+
+
+@bp.route('/usda/import/<int:fdc_id>', methods=['POST'])
+@admin_required
+def usda_import(fdc_id):
+    """Import an ingredient from USDA database"""
+    logger = current_app.logger
+    from flask import session
+    from app.admin.usda_api import usda_api
+    
+    try:
+        ingredient_data = usda_api.import_to_ingredient(fdc_id)
+
+        if not ingredient_data:
+            flash('Failed to import ingredient from USDA', 'error')
+            return redirect(url_for('admin.usda_search'))
+
+        # Check if already exists
+        existing = Ingredient.query.filter_by(name=ingredient_data['name']).first()
+        if existing and not existing.is_deleted:
+            flash(f'Ingredient "{ingredient_data["name"]}" already exists!', 'warning')
+            return redirect(url_for('admin.list_ingredients'))
+
+        # Create ingredient
+        ingredient = Ingredient(
+            **ingredient_data,
+            is_verified=True,
+            verified_by_id=session['user_id']
+        )
+        db.session.add(ingredient)
+        db.session.commit()
+
+        logger.info(f"✅ USDA ingredient imported: {ingredient.name} (FDC ID: {fdc_id})")
+        flash(f'Successfully imported "{ingredient.name}" from USDA!', 'success')
+        return redirect(url_for('admin.list_ingredients'))
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"❌ USDA import failed (FDC ID {fdc_id}): {e}", exc_info=True)
+        flash(f'Error importing ingredient: {str(e)}', 'error')
+        return redirect(url_for('admin.usda_search'))

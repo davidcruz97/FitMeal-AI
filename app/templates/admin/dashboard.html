@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - FitMeal AI Admin{% endblock %}
+{% block page_title %}Analytics Dashboard{% endblock %}
+
+{% block content %}
+<!-- Stats Overview -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon">
+            <i class="fas fa-users"></i>
+        </div>
+        <div class="stat-value">{{ stats.total_users }}</div>
+        <div class="stat-label">Total Users</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon">
+            <i class="fas fa-book-open"></i>
+        </div>
+        <div class="stat-value">{{ stats.total_recipes }}</div>
+        <div class="stat-label">Total Recipes</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon">
+            <i class="fas fa-carrot"></i>
+        </div>
+        <div class="stat-value">{{ stats.total_ingredients }}</div>
+        <div class="stat-label">Total Ingredients</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon">
+            <i class="fas fa-camera"></i>
+        </div>
+        <div class="stat-value">{{ stats.total_scans }}</div>
+        <div class="stat-label">Total Scans</div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="grid-2">
+    <!-- Recent Users -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-user-plus"></i>
+                Recent Users
+            </h3>
+            <a href="{{ url_for('admin.users') }}" class="btn btn-sm btn-outline">View All</a>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Joined</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in recent_users %}
+                    <tr>
+                        <td>{{ user.full_name or 'N/A' }}</td>
+                        <td>{{ user.email }}</td>
+                        <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" class="empty-state">
+                            <i class="fas fa-inbox"></i>
+                            <p>No users yet</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Recent Scans -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-camera"></i>
+                Recent Scans
+            </h3>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Ingredients Found</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for scan in recent_scans %}
+                    <tr>
+                        <td>{{ scan.user.email }}</td>
+                        <td>{{ scan.detected_ingredients|length }}</td>
+                        <td>{{ scan.scan_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" class="empty-state">
+                            <i class="fas fa-inbox"></i>
+                            <p>No scans yet</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Popular Recipes -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fas fa-fire"></i>
+            Popular Recipes
+        </h3>
+        <a href="{{ url_for('admin.recipes') }}" class="btn btn-sm btn-outline">View All</a>
+    </div>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Recipe Name</th>
+                    <th>Category</th>
+                    <th>Times Matched</th>
+                    <th>Avg Match Score</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for recipe in popular_recipes %}
+                <tr>
+                    <td><strong>{{ recipe.name }}</strong></td>
+                    <td><span class="badge badge-primary">{{ recipe.category or 'General' }}</span></td>
+                    <td>{{ recipe.match_count or 0 }}</td>
+                    <td>{{ "%.1f"|format(recipe.avg_score or 0) }}%</td>
+                    <td>
+                        <div class="action-buttons">
+                            <a href="{{ url_for('admin.recipe_edit', recipe_id=recipe.id) }}" class="btn btn-sm btn-secondary btn-icon" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>No recipes yet</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- System Info -->
+<div class="grid-3">
+    <div class="card">
+        <h4 style="margin-bottom: 15px; color: var(--text-primary);">
+            <i class="fas fa-database"></i> Database Stats
+        </h4>
+        <p><strong>Recipes:</strong> {{ stats.total_recipes }}</p>
+        <p><strong>Ingredients:</strong> {{ stats.total_ingredients }}</p>
+        <p><strong>Recipe-Ingredient Links:</strong> {{ stats.total_recipe_ingredients }}</p>
+    </div>
+
+    <div class="card">
+        <h4 style="margin-bottom: 15px; color: var(--text-primary);">
+            <i class="fas fa-chart-line"></i> Activity Stats
+        </h4>
+        <p><strong>Scans Today:</strong> {{ stats.scans_today }}</p>
+        <p><strong>Scans This Week:</strong> {{ stats.scans_week }}</p>
+        <p><strong>Scans This Month:</strong> {{ stats.scans_month }}</p>
+    </div>
+
+    <div class="card">
+        <h4 style="margin-bottom: 15px; color: var(--text-primary);">
+            <i class="fas fa-users"></i> User Stats
+        </h4>
+        <p><strong>New Users Today:</strong> {{ stats.users_today }}</p>
+        <p><strong>New Users This Week:</strong> {{ stats.users_week }}</p>
+        <p><strong>Active Users:</strong> {{ stats.active_users }}</p>
+    </div>
+</div>
+{% endblock %}

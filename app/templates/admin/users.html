@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Users - FitMeal AI Admin{% endblock %}
+{% block page_title %}User Management{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fas fa-users"></i>
+            All Users
+        </h3>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-bar">
+        <input
+            type="text"
+            id="userSearch"
+            class="search-input"
+            placeholder="Search users by name or email..."
+            onkeyup="searchTable('userSearch', 'userTable')"
+        >
+    </div>
+
+    <!-- Users Table -->
+    <div class="table-container">
+        <table id="userTable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Scans</th>
+                    <th>Meals Logged</th>
+                    <th>Joined</th>
+                    <th>Last Active</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td><strong>{{ user.full_name or 'N/A' }}</strong></td>
+                    <td>{{ user.email }}</td>
+                    <td>
+                        {% if user.is_admin %}
+                        <span class="badge badge-danger">Admin</span>
+                        {% elif user.is_nutritionist %}
+                        <span class="badge" style="background-color: #ff9800; color: white;">Nutritionist</span>
+                        {% else %}
+                        <span class="badge badge-primary">User</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ user.scans|length }}</td>
+                    <td>{{ user.meal_logs|length }}</td>
+                    <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td>
+                        {% if user.last_login %}
+                        {{ user.last_login.strftime('%Y-%m-%d %H:%M') }}
+                        {% else %}
+                        Never
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <button type="button" class="btn btn-sm btn-info btn-icon" onclick="viewUser({{ user.id }})" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            {% if not user.is_admin %}
+                            <form action="{{ url_for('admin.user_toggle_role', user_id=user.id) }}" method="POST" style="display: inline;">
+                                <button type="submit" class="btn btn-sm btn-secondary btn-icon" title="Toggle Nutritionist Role">
+                                    <i class="fas fa-user-tag"></i>
+                                </button>
+                            </form>
+                            <form action="{{ url_for('admin.user_delete', user_id=user.id) }}" method="POST" style="display: inline;" onsubmit="return confirmDelete('Are you sure you want to delete {{ user.email }}?')">
+                                <button type="submit" class="btn btn-sm btn-danger btn-icon" title="Delete User">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <i class="fas fa-users"></i>
+                            <h3>No Users Found</h3>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- User Details Modal -->
+<div id="userModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 10000; align-items: center; justify-content: center;">
+    <div class="card" style="max-width: 700px; width: 90%; max-height: 90vh; overflow-y: auto;">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-user"></i>
+                User Details
+            </h3>
+            <button type="button" class="btn btn-outline btn-sm" onclick="closeUserModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div id="userDetailsContent">
+            <!-- User details will be loaded here via AJAX -->
+        </div>
+    </div>
+</div>
+
+<script>
+function viewUser(userId) {
+    // Placeholder - would fetch user details via AJAX
+    document.getElementById('userModal').style.display = 'flex';
+    document.getElementById('userDetailsContent').innerHTML = '<div style="padding: 20px; text-align: center;"><i class="fas fa-spinner fa-spin fa-3x"></i><p>Loading user details...</p></div>';
+}
+
+function closeUserModal() {
+    document.getElementById('userModal').style.display = 'none';
+}
+
+document.getElementById('userModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeUserModal();
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}Ingredients - FitMeal AI Admin{% endblock %}
+{% block page_title %}Ingredient Management{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fas fa-carrot"></i>
+            All Ingredients
+        </h3>
+        <div style="display: flex; gap: 10px;">
+            <a href="{{ url_for('admin.usda_search') }}" class="btn btn-secondary">
+                <i class="fas fa-search"></i>
+                Import from USDA
+            </a>
+            <button type="button" class="btn btn-primary" onclick="showAddModal()">
+                <i class="fas fa-plus"></i>
+                Add New Ingredient
+            </button>
+        </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-bar">
+        <input
+            type="text"
+            id="ingredientSearch"
+            class="search-input"
+            placeholder="Search ingredients by name or category..."
+            onkeyup="searchTable('ingredientSearch', 'ingredientTable')"
+        >
+    </div>
+
+    <!-- Ingredients Table -->
+    <div class="table-container">
+        <table id="ingredientTable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Calories (per 100g)</th>
+                    <th>Protein (g)</th>
+                    <th>Carbs (g)</th>
+                    <th>Fats (g)</th>
+                    <th>Used in Recipes</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ingredient in ingredients %}
+                <tr>
+                    <td><strong>{{ ingredient.name }}</strong></td>
+                    <td>
+                        {% if ingredient.category %}
+                        <span class="badge badge-primary">{{ ingredient.category }}</span>
+                        {% else %}
+                        <span class="badge" style="background-color: #f5f5f5; color: #999;">Uncategorized</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ "%.1f"|format(ingredient.calories_per_100g or 0) }}</td>
+                    <td>{{ "%.1f"|format(ingredient.protein_per_100g or 0) }}</td>
+                    <td>{{ "%.1f"|format(ingredient.carbs_per_100g or 0) }}</td>
+                    <td>{{ "%.1f"|format(ingredient.fats_per_100g or 0) }}</td>
+                    <td>
+                        <span class="badge badge-success">{{ ingredient.recipes|length }} recipes</span>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <button type="button" class="btn btn-sm btn-secondary btn-icon" onclick="editIngredient({{ ingredient.id }})" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <form action="{{ url_for('admin.ingredient_delete', ingredient_id=ingredient.id) }}" method="POST" style="display: inline;" onsubmit="return confirmDelete('Are you sure? This ingredient is used in {{ ingredient.recipes|length }} recipe(s).')">
+                                <button type="submit" class="btn btn-sm btn-danger btn-icon" title="Delete" {% if ingredient.recipes|length > 0 %}disabled{% endif %}>
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <i class="fas fa-carrot"></i>
+                            <h3>No Ingredients Found</h3>
+                            <p>Start by adding ingredients manually or importing from USDA database</p>
+                            <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                                <button type="button" class="btn btn-primary" onclick="showAddModal()">
+                                    <i class="fas fa-plus"></i>
+                                    Add Ingredient
+                                </button>
+                                <a href="{{ url_for('admin.usda_search') }}" class="btn btn-secondary">
+                                    <i class="fas fa-search"></i>
+                                    Import from USDA
+                                </a>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div id="ingredientModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 10000; align-items: center; justify-content: center;">
+    <div class="card" style="max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-plus"></i>
+                <span id="modalTitle">Add New Ingredient</span>
+            </h3>
+            <button type="button" class="btn btn-outline btn-sm" onclick="closeModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <form id="ingredientForm" method="POST" action="{{ url_for('admin.ingredient_create') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="ingredient_id" id="ingredientId">
+
+            <div class="form-group">
+                <label class="form-label">Ingredient Name *</label>
+                <input type="text" name="name" id="ingredientName" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Category</label>
+                <input type="text" name="category" id="ingredientCategory" class="form-control" placeholder="e.g., Vegetable, Fruit, Protein, Grain">
+            </div>
+
+            <h4 style="margin: 20px 0 15px; color: var(--text-primary);">
+                <i class="fas fa-chart-pie"></i> Nutritional Info (per 100g)
+            </h4>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">Calories</label>
+                    <input type="number" name="calories" id="ingredientCalories" class="form-control" step="0.1" min="0">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Protein (g)</label>
+                    <input type="number" name="protein" id="ingredientProtein" class="form-control" step="0.1" min="0">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Carbs (g)</label>
+                    <input type="number" name="carbs" id="ingredientCarbs" class="form-control" step="0.1" min="0">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Fats (g)</label>
+                    <input type="number" name="fats" id="ingredientFats" class="form-control" step="0.1" min="0">
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button type="button" class="btn btn-outline" onclick="closeModal()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Save Ingredient
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function showAddModal() {
+    document.getElementById('ingredientModal').style.display = 'flex';
+    document.getElementById('modalTitle').textContent = 'Add New Ingredient';
+    document.getElementById('ingredientForm').reset();
+    document.getElementById('ingredientId').value = '';
+    document.getElementById('ingredientForm').action = "{{ url_for('admin.ingredient_create') }}";
+}
+
+function editIngredient(id) {
+    // You would fetch ingredient data via AJAX here
+    // For now, just show the modal
+    document.getElementById('ingredientModal').style.display = 'flex';
+    document.getElementById('modalTitle').textContent = 'Edit Ingredient';
+    document.getElementById('ingredientId').value = id;
+    document.getElementById('ingredientForm').action = "{{ url_for('admin.ingredient_update') }}";
+}
+
+function closeModal() {
+    document.getElementById('ingredientModal').style.display = 'none';
+}
+
+// Close modal on background click
+document.getElementById('ingredientModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeModal();
+    }
+});
+</script>
+{% endblock %}

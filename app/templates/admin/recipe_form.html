@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if recipe else 'Create' }} Recipe - FitMeal AI Admin{% endblock %}
+{% block page_title %}{{ 'Edit' if recipe else 'Create New' }} Recipe{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fas fa-{{ 'edit' if recipe else 'plus' }}"></i>
+            {{ 'Edit' if recipe else 'Create New' }} Recipe
+        </h3>
+        <a href="{{ url_for('admin.recipes') }}" class="btn btn-outline">
+            <i class="fas fa-arrow-left"></i>
+            Back to Recipes
+        </a>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" id="recipeForm">
+        {{ form.hidden_tag() }}
+
+        <div class="grid-2">
+            <!-- Left Column -->
+            <div>
+                <!-- Recipe Name -->
+                <div class="form-group">
+                    {{ form.name.label(class="form-label") }}
+                    {{ form.name(class="form-control", required=True) }}
+                    {% if form.name.errors %}
+                        <span class="form-help" style="color: var(--danger-color);">{{ form.name.errors[0] }}</span>
+                    {% endif %}
+                </div>
+
+                <!-- Category -->
+                <div class="form-group">
+                    {{ form.category.label(class="form-label") }}
+                    {{ form.category(class="form-control") }}
+                    <small class="form-help">e.g., Breakfast, Lunch, Dinner, Snack, Dessert</small>
+                </div>
+
+                <!-- Prep Time & Servings -->
+                <div class="grid-2">
+                    <div class="form-group">
+                        {{ form.prep_time_minutes.label(class="form-label") }}
+                        {{ form.prep_time_minutes(class="form-control", type="number", min="0") }}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.servings.label(class="form-label") }}
+                        {{ form.servings(class="form-control", type="number", min="1", value="1") }}
+                    </div>
+                </div>
+
+                <!-- Instructions -->
+                <div class="form-group">
+                    {{ form.instructions.label(class="form-label") }}
+                    {{ form.instructions(class="form-control", rows="6") }}
+                    <small class="form-help">Detailed cooking instructions</small>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div>
+                <!-- Image Upload -->
+                <div class="form-group">
+                    {{ form.image.label(class="form-label") }}
+                    {{ form.image(class="form-control", onchange="previewImage(this, 'imagePreview')") }}
+                    <small class="form-help">Upload a recipe image (JPG, PNG)</small>
+
+                    {% if recipe and recipe.image_url %}
+                    <div style="margin-top: 15px;">
+                        <img id="imagePreview" src="{{ recipe.image_url }}" alt="Recipe preview" style="max-width: 100%; border-radius: 8px; display: block;">
+                    </div>
+                    {% else %}
+                    <div style="margin-top: 15px;">
+                        <img id="imagePreview" src="" alt="Preview" style="max-width: 100%; border-radius: 8px; display: none;">
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Nutritional Info Card -->
+                <div class="card" style="background-color: var(--primary-light); border: 2px solid var(--border-color);">
+                    <h4 style="margin-bottom: 15px; color: var(--text-primary);">
+                        <i class="fas fa-chart-pie"></i> Nutritional Information (per serving)
+                    </h4>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            {{ form.calories.label(class="form-label") }}
+                            {{ form.calories(class="form-control", type="number", min="0", step="0.1") }}
+                        </div>
+
+                        <div class="form-group">
+                            {{ form.protein.label(class="form-label") }}
+                            {{ form.protein(class="form-control", type="number", min="0", step="0.1") }}
+                        </div>
+
+                        <div class="form-group">
+                            {{ form.carbs.label(class="form-label") }}
+                            {{ form.carbs(class="form-control", type="number", min="0", step="0.1") }}
+                        </div>
+
+                        <div class="form-group">
+                            {{ form.fats.label(class="form-label") }}
+                            {{ form.fats(class="form-control", type="number", min="0", step="0.1") }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ingredients Section -->
+        <div class="card" style="background-color: var(--bg-color); margin-top: 25px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h4 style="color: var(--text-primary);">
+                    <i class="fas fa-carrot"></i> Recipe Ingredients
+                </h4>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="addIngredientRow()">
+                    <i class="fas fa-plus"></i> Add Ingredient
+                </button>
+            </div>
+
+            <div id="ingredientsContainer">
+                {% if recipe and recipe.ingredients %}
+                    {% for ing in recipe.ingredients %}
+                    <div class="ingredient-row" style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
+                        <select name="ingredient_id[]" class="form-control" style="flex: 2;" required>
+                            <option value="">Select ingredient...</option>
+                            {% for ingredient in all_ingredients %}
+                            <option value="{{ ingredient.id }}" {% if ing.ingredient_id == ingredient.id %}selected{% endif %}>
+                                {{ ingredient.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <input type="number" name="quantity[]" class="form-control" placeholder="Quantity" value="{{ ing.quantity }}" step="0.01" min="0" style="flex: 1;" required>
+                        <input type="text" name="unit[]" class="form-control" placeholder="Unit (e.g., cups, oz)" value="{{ ing.unit }}" style="flex: 1;">
+                        <button type="button" class="btn btn-danger btn-sm btn-icon" onclick="removeIngredientRow(this)" title="Remove">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="ingredient-row" style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
+                        <select name="ingredient_id[]" class="form-control" style="flex: 2;" required>
+                            <option value="">Select ingredient...</option>
+                            {% for ingredient in all_ingredients %}
+                            <option value="{{ ingredient.id }}">{{ ingredient.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="number" name="quantity[]" class="form-control" placeholder="Quantity" step="0.01" min="0" style="flex: 1;" required>
+                        <input type="text" name="unit[]" class="form-control" placeholder="Unit (e.g., cups, oz)" style="flex: 1;">
+                        <button type="button" class="btn btn-danger btn-sm btn-icon" onclick="removeIngredientRow(this)" title="Remove">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+
+            <small class="form-help">
+                <i class="fas fa-info-circle"></i>
+                Can't find an ingredient? <a href="{{ url_for('admin.ingredients') }}" target="_blank">Add it here</a> first.
+            </small>
+        </div>
+
+        <!-- Submit Buttons -->
+        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 30px;">
+            <a href="{{ url_for('admin.recipes') }}" class="btn btn-outline">
+                <i class="fas fa-times"></i> Cancel
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i>
+                {{ 'Update' if recipe else 'Create' }} Recipe
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Ingredient row template
+const ingredientRowTemplate = `
+    <div class="ingredient-row" style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
+        <select name="ingredient_id[]" class="form-control" style="flex: 2;" required>
+            <option value="">Select ingredient...</option>
+            {% for ingredient in all_ingredients %}
+            <option value="{{ ingredient.id }}">{{ ingredient.name }}</option>
+            {% endfor %}
+        </select>
+        <input type="number" name="quantity[]" class="form-control" placeholder="Quantity" step="0.01" min="0" style="flex: 1;" required>
+        <input type="text" name="unit[]" class="form-control" placeholder="Unit (e.g., cups, oz)" style="flex: 1;">
+        <button type="button" class="btn btn-danger btn-sm btn-icon" onclick="removeIngredientRow(this)" title="Remove">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+`;
+
+function addIngredientRow() {
+    const container = document.getElementById('ingredientsContainer');
+    container.insertAdjacentHTML('beforeend', ingredientRowTemplate);
+}
+
+function removeIngredientRow(button) {
+    const container = document.getElementById('ingredientsContainer');
+    if (container.children.length > 1) {
+        button.closest('.ingredient-row').remove();
+    } else {
+        alert('You must have at least one ingredient!');
+    }
+}
+</script>
+{% endblock %}

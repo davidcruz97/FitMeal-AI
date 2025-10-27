@@ -1,3 +1,4 @@
+<!-- app/templates/admin/ingredients.html -->
 {% extends "base.html" %}
 
 {% block title %}Ingredients - FitMeal AI Admin{% endblock %}
@@ -68,10 +69,11 @@
                     </td>
                     <td>
                         <div class="action-buttons">
-                            <button type="button" class="btn btn-sm btn-secondary btn-icon" onclick="editIngredient({{ ingredient.id }})" title="Edit">
+                            <button type="button" class="btn btn-sm btn-secondary btn-icon" onclick="editIngredient({{ ingredient.id }}, '{{ ingredient.name }}', '{{ ingredient.category }}', {{ ingredient.calories_per_100g or 0 }}, {{ ingredient.protein_per_100g or 0 }}, {{ ingredient.carbs_per_100g or 0 }}, {{ ingredient.fats_per_100g or 0 }})" title="Edit">
                                 <i class="fas fa-edit"></i>
                             </button>
                             <form action="{{ url_for('admin.ingredient_delete', ingredient_id=ingredient.id) }}" method="POST" style="display: inline;" onsubmit="return confirmDelete('Are you sure? This ingredient is used in {{ ingredient.recipes|length }} recipe(s).')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn btn-sm btn-danger btn-icon" title="Delete" {% if ingredient.recipes|length > 0 %}disabled{% endif %}>
                                     <i class="fas fa-trash"></i>
                                 </button>
@@ -139,22 +141,22 @@
             <div class="grid-2">
                 <div class="form-group">
                     <label class="form-label">Calories</label>
-                    <input type="number" name="calories" id="ingredientCalories" class="form-control" step="0.1" min="0">
+                    <input type="number" name="calories_per_100g" id="ingredientCalories" class="form-control" step="0.1" min="0">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Protein (g)</label>
-                    <input type="number" name="protein" id="ingredientProtein" class="form-control" step="0.1" min="0">
+                    <input type="number" name="protein_per_100g" id="ingredientProtein" class="form-control" step="0.1" min="0">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Carbs (g)</label>
-                    <input type="number" name="carbs" id="ingredientCarbs" class="form-control" step="0.1" min="0">
+                    <input type="number" name="carbs_per_100g" id="ingredientCarbs" class="form-control" step="0.1" min="0">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Fats (g)</label>
-                    <input type="number" name="fats" id="ingredientFats" class="form-control" step="0.1" min="0">
+                    <input type="number" name="fats_per_100g" id="ingredientFats" class="form-control" step="0.1" min="0">
                 </div>
             </div>
 
@@ -179,13 +181,18 @@ function showAddModal() {
     document.getElementById('ingredientForm').action = "{{ url_for('admin.ingredient_create') }}";
 }
 
-function editIngredient(id) {
-    // You would fetch ingredient data via AJAX here
-    // For now, just show the modal
+function editIngredient(id, name, category, calories, protein, carbs, fats) {
     document.getElementById('ingredientModal').style.display = 'flex';
     document.getElementById('modalTitle').textContent = 'Edit Ingredient';
     document.getElementById('ingredientId').value = id;
-    document.getElementById('ingredientForm').action = "{{ url_for('admin.ingredient_update') }}";
+    document.getElementById('ingredientName').value = name;
+    document.getElementById('ingredientCategory').value = category;
+    document.getElementById('ingredientCalories').value = calories;
+    document.getElementById('ingredientProtein').value = protein;
+    document.getElementById('ingredientCarbs').value = carbs;
+    document.getElementById('ingredientFats').value = fats;
+    // Build the URL with ingredient_id
+    document.getElementById('ingredientForm').action = "{{ url_for('admin.ingredient_update', ingredient_id=0) }}".replace('0', id);
 }
 
 function closeModal() {

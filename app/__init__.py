@@ -8,6 +8,7 @@ from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_caching import Cache
+from flask_wtf.csrf import CSRFProtect
 from redis import Redis
 from config import config
 from app.utils.logger import setup_logger
@@ -18,6 +19,7 @@ db = SQLAlchemy()
 migrate = Migrate()
 jwt = JWTManager()
 cache = Cache()
+csrf = CSRFProtect()
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=[],
@@ -45,6 +47,7 @@ def create_app(config_name=None):
     migrate.init_app(app, db)
     jwt.init_app(app)
     cache.init_app(app)
+    csrf.init_app(app)
     app.config['RATELIMIT_STORAGE_URI'] = app.config['RATELIMIT_STORAGE_URL']
     limiter.init_app(app)
     

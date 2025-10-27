@@ -12,6 +12,10 @@ from app.models.meal_scan import RecipeIngredient
 from functools import wraps
 import os
 from datetime import datetime
+import logging
+
+# Set up logger for this module
+logger = logging.getLogger(__name__)
 
 # Admin authentication decorator
 def admin_required(f):
@@ -574,38 +578,78 @@ def usda_search():
 @admin_required
 def usda_import(fdc_id):
     """Import an ingredient from USDA database"""
-    logger = current_app.logger
-    from flask import session
     from app.admin.usda_api import usda_api
     
     try:
+        # Get ingredient data from USDA
         ingredient_data = usda_api.import_to_ingredient(fdc_id)
-
+        
         if not ingredient_data:
             flash('Failed to import ingredient from USDA', 'error')
             return redirect(url_for('admin.usda_search'))
-
-        # Check if already exists
-        existing = Ingredient.query.filter_by(name=ingredient_data['name']).first()
-        if existing and not existing.is_deleted:
-            flash(f'Ingredient "{ingredient_data["name"]}" already exists!', 'warning')
-            return redirect(url_for('admin.ingredients'))
-
-        # Create ingredient
-        ingredient = Ingredient(
-            **ingredient_data,
-            is_verified=True,
-            verified_by_id=session['user_id']
-        )
-        db.session.add(ingredient)
-        db.session.commit()
-
-        logger.info(f"✅ USDA ingredient imported: {ingredient.name} (FDC ID: {fdc_id})")
-        flash(f'Successfully imported "{ingredient.name}" from USDA!', 'success')
+        
+        # Check if ingredient already exists (including soft-deleted ones)
+        existing = Ingredient.query.filter(
+            db.or_(
+                Ingredient.name == ingredient_data['name'],
+                Ingredient.usda_fdc_id == fdc_id
+            )
+        ).first()
+        
+        if existing:
+            # Restore if soft-deleted
+            if existing.deleted_at:
+                existing.deleted_at = None
+                existing.is_deleted = False
+                logger.info(f"♻️ Restored soft-deleted ingredient: {existing.name}")
+            
+            # Update with new USDA data
+            existing.category = ingredient_data['category']
+            existing.calories_per_100g = ingredient_data['calories_per_100g']
+            existing.protein_per_100g = ingredient_data['protein_per_100g']
+            existing.carbs_per_100g = ingredient_data['carbs_per_100g']
+            existing.fats_per_100g = ingredient_data['fats_per_100g']
+            existing.fiber_per_100g = ingredient_data.get('fiber_per_100g')
+            existing.saturated_fat_per_100g = ingredient_data.get('saturated_fat_per_100g')
+            existing.sugar_per_100g = ingredient_data.get('sugar_per_100g')
+            existing.sodium_per_100g = ingredient_data.get('sodium_per_100g')
+            existing.usda_fdc_id = fdc_id
+            existing.is_verified = True
+            existing.verified_by_id = current_user.id
+            
+            db.session.commit()
+            
+            logger.info(f"🔄 Updated existing ingredient: {existing.name} (FDC ID: {fdc_id})")
+            flash(f'Ingredient "{existing.name}" updated successfully!', 'success')
+            
+        else:
+            # Create new ingredient
+            ingredient = Ingredient(
+                name=ingredient_data['name'],
+                category=ingredient_data['category'],
+                calories_per_100g=ingredient_data['calories_per_100g'],
+                protein_per_100g=ingredient_data['protein_per_100g'],
+                carbs_per_100g=ingredient_data['carbs_per_100g'],
+                fats_per_100g=ingredient_data['fats_per_100g'],
+                fiber_per_100g=ingredient_data.get('fiber_per_100g'),
+                saturated_fat_per_100g=ingredient_data.get('saturated_fat_per_100g'),
+                sugar_per_100g=ingredient_data.get('sugar_per_100g'),
+                sodium_per_100g=ingredient_data.get('sodium_per_100g'),
+                usda_fdc_id=fdc_id,
+                is_verified=True,
+                verified_by_id=current_user.id
+            )
+            
+            db.session.add(ingredient)
+            db.session.commit()
+            
+            logger.info(f"✅ USDA ingredient imported: {ingredient.name} (FDC ID: {fdc_id})")
+            flash(f'Ingredient "{ingredient.name}" imported successfully!', 'success')
+        
         return redirect(url_for('admin.ingredients'))
-
+        
     except Exception as e:
         db.session.rollback()
-        logger.error(f"❌ USDA import failed (FDC ID {fdc_id}): {e}", exc_info=True)
+        logger.error(f"Error importing from USDA: {str(e)}")
         flash(f'Error importing ingredient: {str(e)}', 'error')
         return redirect(url_for('admin.usda_search'))

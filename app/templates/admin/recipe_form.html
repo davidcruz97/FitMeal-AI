@@ -1,3 +1,4 @@
+<!-- app/templates/admin/recipe_form.html -->
 {% extends "base.html" %}
 
 {% block title %}{{ 'Edit' if recipe else 'Create' }} Recipe - FitMeal AI Admin{% endblock %}
@@ -17,45 +18,88 @@
     </div>
 
     <form method="POST" enctype="multipart/form-data" id="recipeForm">
-        {{ form.hidden_tag() }}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <div class="grid-2">
             <!-- Left Column -->
             <div>
                 <!-- Recipe Name -->
                 <div class="form-group">
-                    {{ form.name.label(class="form-label") }}
-                    {{ form.name(class="form-control", required=True) }}
-                    {% if form.name.errors %}
-                        <span class="form-help" style="color: var(--danger-color);">{{ form.name.errors[0] }}</span>
-                    {% endif %}
+                    <label class="form-label">Recipe Name *</label>
+                    <input type="text" name="name" class="form-control" value="{{ recipe.name if recipe else '' }}" required>
+                </div>
+
+                <!-- Recipe Name (Spanish) -->
+                <div class="form-group">
+                    <label class="form-label">Recipe Name (Spanish)</label>
+                    <input type="text" name="name_es" class="form-control" value="{{ recipe.name_es if recipe else '' }}">
                 </div>
 
                 <!-- Category -->
                 <div class="form-group">
-                    {{ form.category.label(class="form-label") }}
-                    {{ form.category(class="form-control") }}
-                    <small class="form-help">e.g., Breakfast, Lunch, Dinner, Snack, Dessert</small>
+                    <label class="form-label">Category</label>
+                    <select name="category" class="form-control">
+                        <option value="breakfast" {% if recipe and recipe.category == 'breakfast' %}selected{% endif %}>Breakfast</option>
+                        <option value="lunch" {% if recipe and recipe.category == 'lunch' %}selected{% endif %}>Lunch</option>
+                        <option value="dinner" {% if recipe and recipe.category == 'dinner' %}selected{% endif %}>Dinner</option>
+                        <option value="snack" {% if recipe and recipe.category == 'snack' %}selected{% endif %}>Snack</option>
+                        <option value="dessert" {% if recipe and recipe.category == 'dessert' %}selected{% endif %}>Dessert</option>
+                    </select>
                 </div>
 
-                <!-- Prep Time & Servings -->
+                <!-- Description -->
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea name="description" class="form-control" rows="3">{{ recipe.description if recipe else '' }}</textarea>
+                </div>
+
+                <!-- Prep Time, Cook Time & Servings -->
                 <div class="grid-2">
                     <div class="form-group">
-                        {{ form.prep_time_minutes.label(class="form-label") }}
-                        {{ form.prep_time_minutes(class="form-control", type="number", min="0") }}
+                        <label class="form-label">Prep Time (minutes)</label>
+                        <input type="number" name="prep_time_minutes" class="form-control" min="0" value="{{ recipe.prep_time_minutes if recipe else '' }}">
                     </div>
 
                     <div class="form-group">
-                        {{ form.servings.label(class="form-label") }}
-                        {{ form.servings(class="form-control", type="number", min="1", value="1") }}
+                        <label class="form-label">Cook Time (minutes)</label>
+                        <input type="number" name="cook_time_minutes" class="form-control" min="0" value="{{ recipe.cook_time_minutes if recipe else '' }}">
                     </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Servings</label>
+                    <input type="number" name="servings" class="form-control" min="1" value="{{ recipe.servings if recipe else '1' }}">
+                </div>
+
+                <!-- Difficulty -->
+                <div class="form-group">
+                    <label class="form-label">Difficulty</label>
+                    <select name="difficulty" class="form-control">
+                        <option value="easy" {% if recipe and recipe.difficulty == 'easy' %}selected{% endif %}>Easy</option>
+                        <option value="medium" {% if recipe and recipe.difficulty == 'medium' %}selected{% endif %}>Medium</option>
+                        <option value="hard" {% if recipe and recipe.difficulty == 'hard' %}selected{% endif %}>Hard</option>
+                    </select>
+                </div>
+
+                <!-- Tags -->
+                <div class="form-group">
+                    <label class="form-label">Tags (comma-separated)</label>
+                    <input type="text" name="tags" class="form-control" value="{{ recipe.tags if recipe else '' }}" placeholder="e.g., healthy, quick, vegetarian">
+                </div>
+
+                <!-- Published Status -->
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <input type="checkbox" name="is_published" {% if recipe and recipe.is_published %}checked{% endif %}>
+                        <span>Publish Recipe (make visible to users)</span>
+                    </label>
                 </div>
 
                 <!-- Instructions -->
                 <div class="form-group">
-                    {{ form.instructions.label(class="form-label") }}
-                    {{ form.instructions(class="form-control", rows="6") }}
-                    <small class="form-help">Detailed cooking instructions</small>
+                    <label class="form-label">Cooking Instructions *</label>
+                    <textarea name="instructions" class="form-control" rows="8" required>{{ recipe.instructions if recipe else '' }}</textarea>
+                    <small class="form-help">Detailed step-by-step cooking instructions</small>
                 </div>
             </div>
 
@@ -63,8 +107,8 @@
             <div>
                 <!-- Image Upload -->
                 <div class="form-group">
-                    {{ form.image.label(class="form-label") }}
-                    {{ form.image(class="form-control", onchange="previewImage(this, 'imagePreview')") }}
+                    <label class="form-label">Recipe Image</label>
+                    <input type="file" name="image" class="form-control" accept="image/jpeg,image/png" onchange="previewImage(this, 'imagePreview')">
                     <small class="form-help">Upload a recipe image (JPG, PNG)</small>
 
                     {% if recipe and recipe.image_url %}
@@ -78,34 +122,56 @@
                     {% endif %}
                 </div>
 
-                <!-- Nutritional Info Card -->
+                <!-- Nutritional Info Display (calculated from ingredients) -->
+                {% if recipe and nutritional_info %}
                 <div class="card" style="background-color: var(--primary-light); border: 2px solid var(--border-color);">
                     <h4 style="margin-bottom: 15px; color: var(--text-primary);">
                         <i class="fas fa-chart-pie"></i> Nutritional Information (per serving)
                     </h4>
+                    <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 15px;">
+                        <i class="fas fa-info-circle"></i> Calculated automatically from ingredients
+                    </p>
 
                     <div class="grid-2">
-                        <div class="form-group">
-                            {{ form.calories.label(class="form-label") }}
-                            {{ form.calories(class="form-control", type="number", min="0", step="0.1") }}
+                        <div style="padding: 10px; background-color: white; border-radius: 8px;">
+                            <strong style="color: var(--text-secondary); font-size: 12px;">CALORIES</strong>
+                            <p style="font-size: 24px; font-weight: bold; color: var(--primary-color); margin: 5px 0;">
+                                {{ "%.0f"|format(nutritional_info.per_serving.calories) }}
+                            </p>
                         </div>
 
-                        <div class="form-group">
-                            {{ form.protein.label(class="form-label") }}
-                            {{ form.protein(class="form-control", type="number", min="0", step="0.1") }}
+                        <div style="padding: 10px; background-color: white; border-radius: 8px;">
+                            <strong style="color: var(--text-secondary); font-size: 12px;">PROTEIN</strong>
+                            <p style="font-size: 24px; font-weight: bold; color: var(--success-color); margin: 5px 0;">
+                                {{ "%.1f"|format(nutritional_info.per_serving.protein) }}g
+                            </p>
                         </div>
 
-                        <div class="form-group">
-                            {{ form.carbs.label(class="form-label") }}
-                            {{ form.carbs(class="form-control", type="number", min="0", step="0.1") }}
+                        <div style="padding: 10px; background-color: white; border-radius: 8px;">
+                            <strong style="color: var(--text-secondary); font-size: 12px;">CARBS</strong>
+                            <p style="font-size: 24px; font-weight: bold; color: var(--warning-color); margin: 5px 0;">
+                                {{ "%.1f"|format(nutritional_info.per_serving.carbs) }}g
+                            </p>
                         </div>
 
-                        <div class="form-group">
-                            {{ form.fats.label(class="form-label") }}
-                            {{ form.fats(class="form-control", type="number", min="0", step="0.1") }}
+                        <div style="padding: 10px; background-color: white; border-radius: 8px;">
+                            <strong style="color: var(--text-secondary); font-size: 12px;">FATS</strong>
+                            <p style="font-size: 24px; font-weight: bold; color: var(--danger-color); margin: 5px 0;">
+                                {{ "%.1f"|format(nutritional_info.per_serving.fats) }}g
+                            </p>
                         </div>
                     </div>
                 </div>
+                {% else %}
+                <div class="card" style="background-color: var(--primary-light); border: 2px solid var(--border-color);">
+                    <h4 style="margin-bottom: 10px; color: var(--text-primary);">
+                        <i class="fas fa-chart-pie"></i> Nutritional Information
+                    </h4>
+                    <p style="font-size: 14px; color: var(--text-secondary);">
+                        <i class="fas fa-info-circle"></i> Will be calculated automatically from ingredients after saving
+                    </p>
+                </div>
+                {% endif %}
             </div>
         </div>
 
@@ -121,19 +187,24 @@
             </div>
 
             <div id="ingredientsContainer">
-                {% if recipe and recipe.ingredients %}
-                    {% for ing in recipe.ingredients %}
+                {% if recipe and recipe.recipe_ingredients %}
+                    {% for ri in recipe.recipe_ingredients %}
                     <div class="ingredient-row" style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
                         <select name="ingredient_id[]" class="form-control" style="flex: 2;" required>
                             <option value="">Select ingredient...</option>
-                            {% for ingredient in all_ingredients %}
-                            <option value="{{ ingredient.id }}" {% if ing.ingredient_id == ingredient.id %}selected{% endif %}>
+                            {% for ingredient in ingredients %}
+                            <option value="{{ ingredient.id }}" {% if ri.ingredient_id == ingredient.id %}selected{% endif %}>
                                 {{ ingredient.name }}
                             </option>
                             {% endfor %}
                         </select>
-                        <input type="number" name="quantity[]" class="form-control" placeholder="Quantity" value="{{ ing.quantity }}" step="0.01" min="0" style="flex: 1;" required>
-                        <input type="text" name="unit[]" class="form-control" placeholder="Unit (e.g., cups, oz)" value="{{ ing.unit }}" style="flex: 1;">
+                        <input type="number" name="quantity[]" class="form-control" placeholder="Quantity" value="{{ ri.quantity }}" step="0.01" min="0" style="flex: 1;" required>
+                        <input type="text" name="unit[]" class="form-control" placeholder="Unit" value="{{ ri.unit }}" style="flex: 1;" required>
+                        <select name="ingredient_type[]" class="form-control" style="flex: 1;">
+                            <option value="main" {% if ri.ingredient_type == 'main' %}selected{% endif %}>Main</option>
+                            <option value="optional" {% if ri.ingredient_type == 'optional' %}selected{% endif %}>Optional</option>
+                            <option value="garnish" {% if ri.ingredient_type == 'garnish' %}selected{% endif %}>Garnish</option>
+                        </select>
                         <button type="button" class="btn btn-danger btn-sm btn-icon" onclick="removeIngredientRow(this)" title="Remove">
                             <i class="fas fa-times"></i>
                         </button>
@@ -143,12 +214,17 @@
                     <div class="ingredient-row" style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
                         <select name="ingredient_id[]" class="form-control" style="flex: 2;" required>
                             <option value="">Select ingredient...</option>
-                            {% for ingredient in all_ingredients %}
+                            {% for ingredient in ingredients %}
                             <option value="{{ ingredient.id }}">{{ ingredient.name }}</option>
                             {% endfor %}
                         </select>
                         <input type="number" name="quantity[]" class="form-control" placeholder="Quantity" step="0.01" min="0" style="flex: 1;" required>
-                        <input type="text" name="unit[]" class="form-control" placeholder="Unit (e.g., cups, oz)" style="flex: 1;">
+                        <input type="text" name="unit[]" class="form-control" placeholder="Unit (g, ml, cups)" style="flex: 1;" required>
+                        <select name="ingredient_type[]" class="form-control" style="flex: 1;">
+                            <option value="main" selected>Main</option>
+                            <option value="optional">Optional</option>
+                            <option value="garnish">Garnish</option>
+                        </select>
                         <button type="button" class="btn btn-danger btn-sm btn-icon" onclick="removeIngredientRow(this)" title="Remove">
                             <i class="fas fa-times"></i>
                         </button>
@@ -181,12 +257,17 @@ const ingredientRowTemplate = `
     <div class="ingredient-row" style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
         <select name="ingredient_id[]" class="form-control" style="flex: 2;" required>
             <option value="">Select ingredient...</option>
-            {% for ingredient in all_ingredients %}
+            {% for ingredient in ingredients %}
             <option value="{{ ingredient.id }}">{{ ingredient.name }}</option>
             {% endfor %}
         </select>
         <input type="number" name="quantity[]" class="form-control" placeholder="Quantity" step="0.01" min="0" style="flex: 1;" required>
-        <input type="text" name="unit[]" class="form-control" placeholder="Unit (e.g., cups, oz)" style="flex: 1;">
+        <input type="text" name="unit[]" class="form-control" placeholder="Unit (g, ml, cups)" style="flex: 1;" required>
+        <select name="ingredient_type[]" class="form-control" style="flex: 1;">
+            <option value="main" selected>Main</option>
+            <option value="optional">Optional</option>
+            <option value="garnish">Garnish</option>
+        </select>
         <button type="button" class="btn btn-danger btn-sm btn-icon" onclick="removeIngredientRow(this)" title="Remove">
             <i class="fas fa-times"></i>
         </button>
@@ -204,6 +285,18 @@ function removeIngredientRow(button) {
         button.closest('.ingredient-row').remove();
     } else {
         alert('You must have at least one ingredient!');
+    }
+}
+
+function previewImage(input, previewId) {
+    const preview = document.getElementById(previewId);
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(input.files[0]);
     }
 }
 </script>

@@ -31,7 +31,7 @@ class Ingredient(db.Model):
     # Additional Nutritional Info (optional)
     saturated_fat_per_100g = db.Column(db.Float, nullable=True)
     sugar_per_100g = db.Column(db.Float, nullable=True)
-    sodium_per_100mg = db.Column(db.Float, nullable=True)
+    sodium_per_100g = db.Column(db.Float, nullable=True)
     
     # YOLOv8 Detection
     yolo_detectable = db.Column(db.Boolean, default=False, nullable=False, index=True)
@@ -62,10 +62,6 @@ class Ingredient(db.Model):
     # Metadata
     description = db.Column(db.Text, nullable=True)
     image_url = db.Column(db.String(500), nullable=True)
-    
-    # Usage tracking
-    usage_count = db.Column(db.Integer, default=0, nullable=False)
-    last_used_at = db.Column(db.DateTime, nullable=True)
     
     # Relationships
     verified_by = db.relationship('User', foreign_keys=[verified_by_id])
@@ -101,12 +97,6 @@ class Ingredient(db.Model):
         self.verified_at = datetime.utcnow()
         db.session.commit()
     
-    def increment_usage(self):
-        """Track ingredient usage"""
-        self.usage_count += 1
-        self.last_used_at = datetime.utcnow()
-        db.session.commit()
-    
     # Nutritional Calculations
     def calculate_macros(self, quantity_grams):
         """Calculate macros for a specific quantity"""
@@ -140,7 +130,7 @@ class Ingredient(db.Model):
                 'fiber_per_100g': self.fiber_per_100g,
                 'sugar_per_100g': self.sugar_per_100g,
                 'saturated_fat_per_100g': self.saturated_fat_per_100g,
-                'sodium_per_100mg': self.sodium_per_100mg
+                'sodium_per_100g': self.sodium_per_100g
             }
         
         return data
@@ -164,6 +154,5 @@ class Ingredient(db.Model):
                 Ingredient.name_es.ilike(f'%{query_string}%')
             )
         ).order_by(
-            Ingredient.usage_count.desc(),
             Ingredient.name
         ).limit(limit).all()

@@ -1,4 +1,5 @@
-from flask import Blueprint, request, jsonify
+# app/api/meals.py
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db, limiter
 from app.models.meal_scan import MealLog, MealScan
@@ -26,11 +27,14 @@ def log_meal():
         "scan_id": 5  (optional)
     }
     """
+    logger = current_app.logger
+    user_id = int(get_jwt_identity())
+    
     try:
-        user_id = int(get_jwt_identity())
         data = request.get_json()
         
         if not data or not data.get('recipe_id'):
+            logger.warning(f"❌ Meal log failed: No recipe_id provided [User: {user_id}]")
             return jsonify({'error': 'recipe_id is required'}), 400
         
         recipe_id = data.get('recipe_id')
@@ -39,19 +43,36 @@ def log_meal():
         notes = data.get('notes', '').strip()
         scan_id = data.get('scan_id')
         
+        logger.info(
+            f"🍽️  Logging meal: Recipe {recipe_id} | Type: {meal_type} | "
+            f"Servings: {servings_consumed} [User: {user_id}]"
+        )
+        
         # Validate meal_type
         valid_meal_types = ['breakfast', 'lunch', 'dinner', 'snack']
         if meal_type not in valid_meal_types:
+            logger.warning(
+                f"❌ Meal log failed: Invalid meal_type '{meal_type}' [User: {user_id}]"
+            )
             return jsonify({'error': f'meal_type must be one of: {", ".join(valid_meal_types)}'}), 400
         
         # Check if recipe exists
         recipe = Recipe.query.get(recipe_id)
         if not recipe or recipe.is_deleted:
+            logger.warning(
+                f"❌ Meal log failed: Recipe {recipe_id} not found [User: {user_id}]"
+            )
             return jsonify({'error': 'Recipe not found'}), 404
         
         # Calculate nutritional values for the consumed servings
         macros = recipe.calculate_macros(servings=servings_consumed)
-        per_serving = macros['per_serving']
+        
+        logger.debug(
+            f"📊 Calculated macros: {macros['total']['calories']:.1f} kcal | "
+            f"P: {macros['total']['protein']:.1f}g | "
+            f"C: {macros['total']['carbs']:.1f}g | "
+            f"F: {macros['total']['fats']:.1f}g"
+        )
         
         # Create meal log
         meal_log = MealLog(
@@ -71,6 +92,11 @@ def log_meal():
         db.session.add(meal_log)
         db.session.commit()
         
+        logger.info(
+            f"✅ Meal logged successfully: {recipe.name} ({meal_type}) | "
+            f"ID: {meal_log.id} | {macros['total']['calories']:.0f} kcal [User: {user_id}]"
+        )
+        
         return jsonify({
             'message': 'Meal logged successfully',
             'meal_log': meal_log.to_dict()
@@ -78,6 +104,7 @@ def log_meal():
         
     except Exception as e:
         db.session.rollback()
+        logger.error(f"❌ Failed to log meal for user {user_id}: {e}", exc_info=True)
         return jsonify({'error': f'Failed to log meal: {str(e)}'}), 500
 
 
@@ -94,13 +121,19 @@ def get_meal_history():
         days: filter last N days (default: 30)
         meal_type: filter by meal type
     """
+    logger = current_app.logger
+    user_id = int(get_jwt_identity())
+    
     try:
-        user_id = int(get_jwt_identity())
-        
         page = int(request.args.get('page', 1))
         per_page = min(int(request.args.get('per_page', 20)), 100)
         days = int(request.args.get('days', 30))
         meal_type = request.args.get('meal_type', '').strip()
+        
+        logger.debug(
+            f"📜 Fetching meal history: Last {days} days | Page {page} | "
+            f"Type: {meal_type or 'all'} [User: {user_id}]"
+        )
         
         # Build query
         query = MealLog.get_active_query().filter_by(user_id=user_id)
@@ -119,6 +152,11 @@ def get_meal_history():
         # Paginate
         pagination = query.paginate(page=page, per_page=per_page, error_out=False)
         
+        logger.info(
+            f"✅ Retrieved meal history: {len(pagination.items)} meals | "
+            f"Page {page}/{pagination.pages} | Total: {pagination.total} [User: {user_id}]"
+        )
+        
         return jsonify({
             'meals': [meal.to_dict() for meal in pagination.items],
             'total': pagination.total,
@@ -130,6 +168,7 @@ def get_meal_history():
         }), 200
         
     except Exception as e:
+        logger.error(f"❌ Failed to get meal history for user {user_id}: {e}", exc_info=True)
         return jsonify({'error': f'Failed to get meal history: {str(e)}'}), 500
 
 
@@ -143,9 +182,13 @@ def get_nutrition_stats():
     Query params:
         days: calculate stats for last N days (default: 7)
     """
+    logger = current_app.logger
+    user_id = int(get_jwt_identity())
+    
     try:
-        user_id = int(get_jwt_identity())
         days = int(request.args.get('days', 7))
+        
+        logger.debug(f"📊 Calculating nutrition stats for last {days} days [User: {user_id}]")
         
         # Calculate date range
         since_date = datetime.utcnow() - timedelta(days=days)
@@ -157,6 +200,7 @@ def get_nutrition_stats():
         ).all()
         
         if not meals:
+            logger.info(f"ℹ️  No meals found for stats calculation [User: {user_id}]")
             return jsonify({
                 'stats': {
                     'total_meals': 0,
@@ -207,6 +251,12 @@ def get_nutrition_stats():
         for meal in meals:
             meal_type_counts[meal.meal_type] = meal_type_counts.get(meal.meal_type, 0) + 1
         
+        logger.info(
+            f"✅ Calculated nutrition stats: {len(meals)} meals | "
+            f"Avg {total_calories/days:.0f} kcal/day | "
+            f"P: {total_protein/days:.0f}g C: {total_carbs/days:.0f}g F: {total_fats/days:.0f}g [User: {user_id}]"
+        )
+        
         return jsonify({
             'stats': {
                 'total_meals': len(meals),
@@ -229,55 +279,70 @@ def get_nutrition_stats():
         }), 200
         
     except Exception as e:
+        logger.error(f"❌ Failed to get nutrition stats for user {user_id}: {e}", exc_info=True)
         return jsonify({'error': f'Failed to get stats: {str(e)}'}), 500
 
 
 @bp.route('/<int:meal_id>', methods=['GET'])
 @jwt_required()
 def get_meal(meal_id):
-    """
-    Get meal log details by ID
-    """
+    """Get meal log details by ID"""
+    logger = current_app.logger
+    user_id = int(get_jwt_identity())
+    
     try:
-        user_id = int(get_jwt_identity())
-        
         meal = MealLog.query.get(meal_id)
         
         if not meal or meal.is_deleted:
+            logger.warning(f"⚠️  Meal not found: {meal_id} [User: {user_id}]")
             return jsonify({'error': 'Meal not found'}), 404
         
         # Check ownership
         if meal.user_id != user_id:
+            logger.warning(
+                f"🚫 Access denied: User {user_id} attempted to access meal {meal_id} "
+                f"owned by user {meal.user_id}"
+            )
             return jsonify({'error': 'Access denied'}), 403
+        
+        logger.debug(f"📊 Retrieved meal {meal_id} [User: {user_id}]")
         
         return jsonify({
             'meal': meal.to_dict()
         }), 200
         
     except Exception as e:
+        logger.error(f"❌ Failed to get meal {meal_id}: {e}", exc_info=True)
         return jsonify({'error': f'Failed to get meal: {str(e)}'}), 500
 
 
 @bp.route('/<int:meal_id>', methods=['DELETE'])
 @jwt_required()
 def delete_meal(meal_id):
-    """
-    Delete (soft delete) a meal log
-    """
+    """Delete (soft delete) a meal log"""
+    logger = current_app.logger
+    user_id = int(get_jwt_identity())
+    
     try:
-        user_id = int(get_jwt_identity())
-        
         meal = MealLog.query.get(meal_id)
         
         if not meal or meal.is_deleted:
+            logger.warning(f"⚠️  Meal not found: {meal_id} [User: {user_id}]")
             return jsonify({'error': 'Meal not found'}), 404
         
         # Check ownership
         if meal.user_id != user_id:
+            logger.warning(
+                f"🚫 Access denied: User {user_id} attempted to delete meal {meal_id}"
+            )
             return jsonify({'error': 'Access denied'}), 403
+        
+        recipe_name = meal.recipe.name if meal.recipe else 'Unknown'
         
         # Soft delete
         meal.soft_delete()
+        
+        logger.info(f"🗑️  Meal deleted: {meal_id} ({recipe_name}) [User: {user_id}]")
         
         return jsonify({
             'message': 'Meal deleted successfully'
@@ -285,4 +350,5 @@ def delete_meal(meal_id):
         
     except Exception as e:
         db.session.rollback()
+        logger.error(f"❌ Failed to delete meal {meal_id}: {e}", exc_info=True)
         return jsonify({'error': f'Failed to delete meal: {str(e)}'}), 500

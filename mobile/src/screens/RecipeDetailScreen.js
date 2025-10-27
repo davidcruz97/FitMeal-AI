@@ -222,10 +222,16 @@ const styles = StyleSheet.create({
   },
   footer: {
     padding: 20,
-    paddingBottom: 10,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 16, 
     backgroundColor: Colors.surface,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
+    // Shadow for better separation
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 8,
   },
   logButton: {
     backgroundColor: Colors.primary,

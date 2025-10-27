@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     padding: 20,
-    paddingBottom: 10,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
     backgroundColor: Colors.surface,
     borderTopWidth: 1,
     borderTopColor: Colors.border,

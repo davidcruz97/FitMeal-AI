@@ -1,11 +1,12 @@
 # app/api/recipes.py
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db, cache, limiter
 from app.models.recipe import Recipe
 from app.models.ingredient import Ingredient
 from app.models.meal_scan import RecipeIngredient
 from app.models.user import User
+import time
 
 bp = Blueprint('api_recipes', __name__)
 
@@ -24,20 +25,29 @@ def match_recipes():
     
     Returns recipes sorted by match score (percentage of ingredients matched)
     """
+    logger = current_app.logger
+    
     try:
         data = request.get_json()
         
         if not data or not data.get('ingredient_ids'):
+            logger.warning("❌ Recipe match failed: No ingredient_ids provided")
             return jsonify({'error': 'ingredient_ids is required'}), 400
         
         ingredient_ids = data.get('ingredient_ids', [])
         max_results = min(int(data.get('max_results', 10)), 50)
         
         if not isinstance(ingredient_ids, list) or len(ingredient_ids) == 0:
+            logger.warning(f"❌ Recipe match failed: Invalid ingredient_ids: {ingredient_ids}")
             return jsonify({'error': 'ingredient_ids must be a non-empty list'}), 400
+        
+        logger.info(f"🔍 Matching recipes for {len(ingredient_ids)} ingredients: {ingredient_ids}")
+        
+        start_time = time.time()
         
         # Get all published recipes
         recipes = Recipe.get_published_query().all()
+        logger.debug(f"   Found {len(recipes)} published recipes to check")
         
         # Calculate match score for each recipe
         recipe_matches = []
@@ -75,6 +85,20 @@ def match_recipes():
         # Limit results
         recipe_matches = recipe_matches[:max_results]
         
+        processing_time = (time.time() - start_time) * 1000
+        
+        logger.info(
+            f"✅ Recipe matching complete: {len(recipe_matches)} matches found | "
+            f"Processing time: {processing_time:.0f}ms"
+        )
+        
+        if recipe_matches:
+            logger.debug(
+                f"   Top matches: " + 
+                ", ".join([f"{m['recipe']['name']} ({m['match_score']}%)" 
+                          for m in recipe_matches[:3]])
+            )
+        
         return jsonify({
             'matches': recipe_matches,
             'total_matches': len(recipe_matches),
@@ -82,6 +106,7 @@ def match_recipes():
         }), 200
         
     except Exception as e:
+        logger.error(f"❌ Recipe matching failed: {e}", exc_info=True)
         return jsonify({'error': f'Recipe matching failed: {str(e)}'}), 500
 
 
@@ -99,12 +124,19 @@ def list_recipes():
         tag: filter by tag
         search: search in recipe name
     """
+    logger = current_app.logger
+    
     try:
         page = int(request.args.get('page', 1))
         per_page = min(int(request.args.get('per_page', 20)), 50)
         category = request.args.get('category', '').strip()
         tag = request.args.get('tag', '').strip()
         search = request.args.get('search', '').strip()
+        
+        logger.debug(
+            f"📖 Listing recipes: Page {page} | Category: {category or 'all'} | "
+            f"Tag: {tag or 'none'} | Search: {search or 'none'}"
+        )
         
         # Build query
         query = Recipe.get_published_query()
@@ -124,6 +156,11 @@ def list_recipes():
         # Paginate
         pagination = query.paginate(page=page, per_page=per_page, error_out=False)
         
+        logger.info(
+            f"✅ Retrieved recipes: {len(pagination.items)} recipes | "
+            f"Page {page}/{pagination.pages} | Total: {pagination.total}"
+        )
+        
         return jsonify({
             'recipes': [recipe.to_dict(include_ingredients=False, include_macros=False) for recipe in pagination.items],
             'total': pagination.total,
@@ -135,6 +172,7 @@ def list_recipes():
         }), 200
         
     except Exception as e:
+        logger.error(f"❌ Failed to list recipes: {e}", exc_info=True)
         return jsonify({'error': f'Failed to list recipes: {str(e)}'}), 500
 
 
@@ -147,10 +185,13 @@ def get_recipe(recipe_id):
     Query params:
         servings: calculate macros for specific servings (optional)
     """
+    logger = current_app.logger
+    
     try:
         recipe = Recipe.query.get(recipe_id)
         
         if not recipe or recipe.is_deleted or not recipe.is_published:
+            logger.warning(f"⚠️  Recipe not found: {recipe_id}")
             return jsonify({'error': 'Recipe not found'}), 404
         
         # Increment view count
@@ -165,23 +206,30 @@ def get_recipe(recipe_id):
         # Calculate macros with custom servings if provided
         if servings:
             recipe_data['nutritional_info'] = recipe.calculate_macros(servings)
+            logger.debug(f"📊 Calculated macros for {servings} servings")
         else:
             recipe_data['nutritional_info'] = recipe.calculate_macros()
+        
+        logger.info(
+            f"✅ Retrieved recipe: {recipe.name} (ID: {recipe_id}) | "
+            f"Views: {recipe.view_count} | Category: {recipe.category}"
+        )
         
         return jsonify({
             'recipe': recipe_data
         }), 200
         
     except Exception as e:
+        logger.error(f"❌ Failed to get recipe {recipe_id}: {e}", exc_info=True)
         return jsonify({'error': f'Failed to get recipe: {str(e)}'}), 500
 
 
 @bp.route('/categories', methods=['GET'])
 @cache.cached(timeout=3600)  # Cache for 1 hour
 def get_categories():
-    """
-    Get all recipe categories with counts
-    """
+    """Get all recipe categories with counts"""
+    logger = current_app.logger
+    
     try:
         categories = db.session.query(
             Recipe.category,
@@ -192,6 +240,8 @@ def get_categories():
         ).group_by(
             Recipe.category
         ).all()
+        
+        logger.debug(f"📚 Retrieved {len(categories)} recipe categories")
         
         return jsonify({
             'categories': [
@@ -204,15 +254,16 @@ def get_categories():
         }), 200
         
     except Exception as e:
+        logger.error(f"❌ Failed to get categories: {e}", exc_info=True)
         return jsonify({'error': f'Failed to get categories: {str(e)}'}), 500
 
 
 @bp.route('/tags', methods=['GET'])
 @cache.cached(timeout=3600)  # Cache for 1 hour
 def get_tags():
-    """
-    Get all unique recipe tags
-    """
+    """Get all unique recipe tags"""
+    logger = current_app.logger
+    
     try:
         recipes = Recipe.get_published_query().filter(Recipe.tags.isnot(None)).all()
         
@@ -221,11 +272,14 @@ def get_tags():
             tags = recipe.get_tags_list()
             all_tags.update(tags)
         
+        logger.debug(f"🏷️  Retrieved {len(all_tags)} unique tags")
+        
         return jsonify({
             'tags': sorted(list(all_tags))
         }), 200
         
     except Exception as e:
+        logger.error(f"❌ Failed to get tags: {e}", exc_info=True)
         return jsonify({'error': f'Failed to get tags: {str(e)}'}), 500
 
 
@@ -254,21 +308,30 @@ def create_recipe():
         ]
     }
     """
+    logger = current_app.logger
+    
     try:
         user_id = int(get_jwt_identity())
         user = User.query.get(user_id)
         
         if not user or not user.is_nutritionist():
+            logger.warning(
+                f"🚫 Recipe creation denied: User {user_id} is not a nutritionist"
+            )
             return jsonify({'error': 'Nutritionist access required'}), 403
         
         data = request.get_json()
         
         if not data or not data.get('name') or not data.get('instructions'):
+            logger.warning(f"❌ Recipe creation failed: Missing required fields [User: {user_id}]")
             return jsonify({'error': 'Name and instructions are required'}), 400
+        
+        recipe_name = data.get('name').strip()
+        logger.info(f"📝 Creating recipe: {recipe_name} [User: {user.email}]")
         
         # Create recipe
         recipe = Recipe(
-            name=data.get('name').strip(),
+            name=recipe_name,
             category=data.get('category', 'lunch'),
             instructions=data.get('instructions').strip(),
             prep_time_minutes=data.get('prep_time_minutes'),
@@ -286,6 +349,8 @@ def create_recipe():
         
         # Add ingredients
         ingredients_data = data.get('ingredients', [])
+        logger.debug(f"   Adding {len(ingredients_data)} ingredients")
+        
         for idx, ing_data in enumerate(ingredients_data):
             recipe_ingredient = RecipeIngredient(
                 recipe_id=recipe.id,
@@ -304,6 +369,11 @@ def create_recipe():
         # Clear cache
         cache.clear()
         
+        logger.info(
+            f"✅ Recipe created successfully: {recipe_name} (ID: {recipe.id}) | "
+            f"Category: {recipe.category} | Ingredients: {len(ingredients_data)} [User: {user.email}]"
+        )
+        
         return jsonify({
             'message': 'Recipe created successfully',
             'recipe': recipe.to_dict(include_ingredients=True, include_macros=True)
@@ -311,4 +381,5 @@ def create_recipe():
         
     except Exception as e:
         db.session.rollback()
+        logger.error(f"❌ Failed to create recipe: {e}", exc_info=True)
         return jsonify({'error': f'Failed to create recipe: {str(e)}'}), 500

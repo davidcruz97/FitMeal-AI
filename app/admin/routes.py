@@ -207,6 +207,36 @@ def recipe_create():
             db.session.add(recipe)
             db.session.flush()
             
+            # Handle image upload
+            if 'image' in request.files:
+                file = request.files['image']
+                if file and file.filename:
+                    # Validate file extension
+                    allowed_extensions = {'jpg', 'jpeg', 'png', 'webp'}
+                    filename = secure_filename(file.filename)
+                    file_ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+                    
+                    if file_ext in allowed_extensions:
+                        # Generate unique filename
+                        import uuid
+                        unique_filename = f"recipe_{recipe.id}_{uuid.uuid4().hex[:8]}.{file_ext}"
+                        
+                        # Save file
+                        upload_folder = current_app.config['UPLOAD_FOLDER']
+                        recipe_folder = os.path.join(upload_folder, 'recipes')
+                        os.makedirs(recipe_folder, exist_ok=True)
+                        
+                        filepath = os.path.join(recipe_folder, unique_filename)
+                        file.save(filepath)
+                        
+                        # Update recipe with image URL
+                        recipe.image_url = f'/static/uploads/recipes/{unique_filename}'
+                        
+                        logger.info(f"📸 Image saved: {unique_filename} for recipe {recipe.id}")
+                    else:
+                        logger.warning(f"⚠️ Invalid image format: {file_ext} (allowed: {allowed_extensions})")
+                        flash('Invalid image format. Please use JPG, PNG, or WebP', 'warning')
+            
             # Add ingredients
             ingredient_ids = request.form.getlist('ingredient_id[]')
             quantities = request.form.getlist('quantity[]')
@@ -298,6 +328,46 @@ def recipe_edit(recipe_id):
             recipe.difficulty = request.form.get('difficulty', 'medium')
             recipe.tags = request.form.get('tags', '').strip() or None
             recipe.is_published = request.form.get('is_published') == 'on'
+            
+            # Handle image upload
+            if 'image' in request.files:
+                file = request.files['image']
+                if file and file.filename:
+                    # Validate file extension
+                    allowed_extensions = {'jpg', 'jpeg', 'png', 'webp'}
+                    filename = secure_filename(file.filename)
+                    file_ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+                    
+                    if file_ext in allowed_extensions:
+                        # Generate unique filename
+                        import uuid
+                        unique_filename = f"recipe_{recipe.id}_{uuid.uuid4().hex[:8]}.{file_ext}"
+                        
+                        # Save file
+                        upload_folder = current_app.config['UPLOAD_FOLDER']
+                        recipe_folder = os.path.join(upload_folder, 'recipes')
+                        os.makedirs(recipe_folder, exist_ok=True)
+                        
+                        filepath = os.path.join(recipe_folder, unique_filename)
+                        file.save(filepath)
+                        
+                        # Delete old image if exists
+                        if recipe.image_url:
+                            old_image_path = os.path.join(current_app.root_path, recipe.image_url.lstrip('/'))
+                            if os.path.exists(old_image_path):
+                                try:
+                                    os.remove(old_image_path)
+                                    logger.info(f"🗑️ Deleted old image: {recipe.image_url}")
+                                except Exception as e:
+                                    logger.warning(f"⚠️ Could not delete old image: {e}")
+                        
+                        # Update recipe with new image URL
+                        recipe.image_url = f'/static/uploads/recipes/{unique_filename}'
+                        
+                        logger.info(f"📸 Image saved: {unique_filename} for recipe {recipe.id}")
+                    else:
+                        logger.warning(f"⚠️ Invalid image format: {file_ext} (allowed: {allowed_extensions})")
+                        flash('Invalid image format. Please use JPG, PNG, or WebP', 'warning')
             
             # Remove old ingredients
             RecipeIngredient.query.filter_by(recipe_id=recipe.id).delete()

@@ -17,7 +17,7 @@
         </a>
     </div>
 
-    <form method="POST" enctype="multipart/form-data" id="recipeForm">
+    <form method="POST" enctype="multipart/form-data" id="recipeForm" action="{% if recipe %}{{ url_for('admin.recipe_edit', recipe_id=recipe.id) }}{% else %}{{ url_for('admin.recipe_create') }}{% endif %}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <div class="grid-2">

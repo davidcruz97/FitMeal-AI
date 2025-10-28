@@ -78,7 +78,7 @@
                         <i class="fas fa-utensils"></i> {{ recipe.servings or 1 }}
                     </td>
                     <td>
-                        <span class="badge badge-success">{{ recipe.ingredients|length }} items</span>
+                        <span class="badge badge-success">{{ recipe.recipe_ingredients.count() }} items</span>
                     </td>
                     <td>
                         <div class="action-buttons">

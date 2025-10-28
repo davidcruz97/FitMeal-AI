@@ -33,6 +33,11 @@ class Ingredient(db.Model):
     sugar_per_100g = db.Column(db.Float, nullable=True)
     sodium_per_100g = db.Column(db.Float, nullable=True)
     
+    # Serving size information (from USDA RACC)
+    serving_size_grams = db.Column(db.Float, nullable=True, comment='Standard serving size in grams (RACC)')
+    serving_size_unit = db.Column(db.String(50), nullable=True, comment='Unit for serving (racc, cup, tbsp, etc)')
+    serving_size_description = db.Column(db.String(200), nullable=True, comment='Human-readable serving description')
+    
     # YOLOv8 Detection
     yolo_detectable = db.Column(db.Boolean, default=False, nullable=False, index=True)
     yolo_class_name = db.Column(db.String(100), nullable=True, index=True)
@@ -62,6 +67,9 @@ class Ingredient(db.Model):
     # Metadata
     description = db.Column(db.Text, nullable=True)
     image_url = db.Column(db.String(500), nullable=True)
+    
+    # Usage tracking
+    usage_count = db.Column(db.Integer, default=0, nullable=False)
     
     # Relationships
     verified_by = db.relationship('User', foreign_keys=[verified_by_id])
@@ -118,7 +126,10 @@ class Ingredient(db.Model):
             'category': self.category,
             'is_verified': self.is_verified,
             'yolo_detectable': self.yolo_detectable,
-            'image_url': self.image_url
+            'image_url': self.image_url,
+            'serving_size_grams': self.serving_size_grams,
+            'serving_size_unit': self.serving_size_unit,
+            'serving_size_description': self.serving_size_description
         }
         
         if include_nutritional:
@@ -154,5 +165,6 @@ class Ingredient(db.Model):
                 Ingredient.name_es.ilike(f'%{query_string}%')
             )
         ).order_by(
+            Ingredient.usage_count.desc(),
             Ingredient.name
         ).limit(limit).all()

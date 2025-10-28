@@ -245,12 +245,16 @@ def recipe_create():
             
             for idx, ing_id in enumerate(ingredient_ids):
                 if ing_id and quantities[idx]:
+                    # Get ingredient first
+                    ingredient = Ingredient.query.get(int(ing_id))
+                    quantity_grams = convert_to_grams(float(quantities[idx]), units[idx], ingredient)
+
                     recipe_ingredient = RecipeIngredient(
                         recipe_id=recipe.id,
                         ingredient_id=int(ing_id),
                         quantity=float(quantities[idx]),
                         unit=units[idx],
-                        quantity_grams=float(quantities[idx]) if units[idx] == 'g' else float(quantities[idx]) * 100,
+                        quantity_grams=quantity_grams,
                         ingredient_type=types[idx] if idx < len(types) else 'main',
                         order_index=idx
                     )
@@ -380,12 +384,16 @@ def recipe_edit(recipe_id):
             
             for idx, ing_id in enumerate(ingredient_ids):
                 if ing_id and quantities[idx]:
+                    # Get ingredient first
+                    ingredient = Ingredient.query.get(int(ing_id))
+                    quantity_grams = convert_to_grams(float(quantities[idx]), units[idx], ingredient)
+                    
                     recipe_ingredient = RecipeIngredient(
                         recipe_id=recipe.id,
                         ingredient_id=int(ing_id),
                         quantity=float(quantities[idx]),
                         unit=units[idx],
-                        quantity_grams=float(quantities[idx]) if units[idx] == 'g' else float(quantities[idx]) * 100,
+                        quantity_grams=quantity_grams,
                         ingredient_type=types[idx] if idx < len(types) else 'main',
                         order_index=idx
                     )
@@ -415,7 +423,7 @@ def recipe_edit(recipe_id):
 @bp.route('/recipes/<int:recipe_id>/delete', methods=['POST'])
 @admin_required
 def recipe_delete(recipe_id):
-    """Delete (soft delete) recipe"""
+    """Delete recipe permanently (hard delete)"""
     logger = current_app.logger
     from flask import session
     
@@ -423,9 +431,22 @@ def recipe_delete(recipe_id):
     
     try:
         recipe_name = recipe.name
-        recipe.soft_delete()
         
-        logger.info(f"🗑️  Recipe deleted: {recipe_name} (ID: {recipe_id})")
+        # Delete associated image if exists
+        if recipe.image_url:
+            image_path = os.path.join(current_app.root_path, recipe.image_url.lstrip('/'))
+            if os.path.exists(image_path):
+                try:
+                    os.remove(image_path)
+                    logger.info(f"🗑️ Deleted recipe image: {recipe.image_url}")
+                except Exception as e:
+                    logger.warning(f"⚠️ Could not delete image: {e}")
+        
+        # Delete recipe (cascade will delete recipe_ingredients automatically)
+        db.session.delete(recipe)
+        db.session.commit()
+        
+        logger.info(f"🗑️ Recipe deleted permanently: {recipe_name} (ID: {recipe_id})")
         flash(f'Recipe "{recipe_name}" deleted successfully', 'success')
         
     except Exception as e:
@@ -458,6 +479,52 @@ def toggle_publish_recipe(recipe_id):
 
 
 # ==================== INGREDIENT MANAGEMENT ====================
+
+def convert_to_grams(quantity, unit, ingredient=None):
+    """
+    Convert various units to grams for nutritional calculations
+    Uses ingredient serving size when available
+    """
+    unit = unit.lower().strip()
+    
+    # Already in grams
+    if unit in ['g', 'gram', 'grams']:
+        return quantity
+    
+    # Use ingredient's serving size if unit matches
+    if ingredient and ingredient.serving_size_grams and ingredient.serving_size_unit:
+        if unit == ingredient.serving_size_unit.lower():
+            return quantity * ingredient.serving_size_grams
+    
+    # Volume to weight (approximate)
+    if unit in ['ml', 'milliliter', 'milliliters']:
+        return quantity
+    
+    if unit in ['cup', 'cups']:
+        return quantity * 240
+    
+    if unit in ['tbsp', 'tablespoon', 'tablespoons']:
+        return quantity * 15
+    
+    if unit in ['tsp', 'teaspoon', 'teaspoons', 'tea spoon']:
+        return quantity * 5
+    
+    # Common units
+    if unit in ['scoop', 'scoops']:
+        return quantity * 30
+    
+    # Generic units (use ingredient-specific if available)
+    if unit in ['unit', 'units', 'piece', 'pieces']:
+        if ingredient:
+            name_lower = ingredient.name.lower()
+            if 'egg' in name_lower:
+                return quantity * 50
+            elif 'bread' in name_lower or 'slice' in name_lower:
+                return quantity * 30
+        return quantity * 100  # Default
+    
+    # Default: assume 100g per unit
+    return quantity * 100
 
 @bp.route('/ingredients')
 @admin_required
@@ -574,16 +641,37 @@ def ingredient_update(ingredient_id):
 @bp.route('/ingredients/<int:ingredient_id>/delete', methods=['POST'])
 @admin_required
 def ingredient_delete(ingredient_id):
-    """Delete (soft delete) ingredient"""
+    """Delete ingredient permanently (hard delete)"""
     logger = current_app.logger
+    from flask import session
     
     ingredient = Ingredient.query.get_or_404(ingredient_id)
     
     try:
         ingredient_name = ingredient.name
-        ingredient.soft_delete()
         
-        logger.info(f"🗑️  Ingredient deleted: {ingredient_name} (ID: {ingredient_id})")
+        # Check if ingredient is used in any recipes
+        recipe_count = RecipeIngredient.query.filter_by(ingredient_id=ingredient_id).count()
+        
+        if recipe_count > 0:
+            flash(f'Cannot delete "{ingredient_name}" - it is used in {recipe_count} recipe(s). Remove it from recipes first.', 'error')
+            return redirect(url_for('admin.ingredients'))
+        
+        # Delete associated image if exists
+        if ingredient.image_url:
+            image_path = os.path.join(current_app.root_path, ingredient.image_url.lstrip('/'))
+            if os.path.exists(image_path):
+                try:
+                    os.remove(image_path)
+                    logger.info(f"🗑️ Deleted ingredient image: {ingredient.image_url}")
+                except Exception as e:
+                    logger.warning(f"⚠️ Could not delete image: {e}")
+        
+        # Delete ingredient
+        db.session.delete(ingredient)
+        db.session.commit()
+        
+        logger.info(f"🗑️ Ingredient deleted permanently: {ingredient_name} (ID: {ingredient_id})")
         flash(f'Ingredient "{ingredient_name}" deleted successfully', 'success')
         
     except Exception as e:
@@ -593,6 +681,20 @@ def ingredient_delete(ingredient_id):
     
     return redirect(url_for('admin.ingredients'))
 
+@bp.route('/api/ingredients/<int:ingredient_id>/serving')
+@admin_required
+def get_ingredient_serving(ingredient_id):
+    """Get serving size info for an ingredient"""
+    ingredient = Ingredient.query.get(ingredient_id)
+    
+    if not ingredient or ingredient.is_deleted:
+        return jsonify({'error': 'Ingredient not found'}), 404
+    
+    return jsonify({
+        'serving_size_grams': ingredient.serving_size_grams,
+        'serving_size_unit': ingredient.serving_size_unit,
+        'serving_size_description': ingredient.serving_size_description
+    })
 
 # ==================== API HELPERS (AJAX) ====================
 
@@ -625,6 +727,7 @@ def api_search_ingredients():
 def usda_search():
     """Search USDA food database"""
     from app.admin.usda_api import usda_api
+    import requests
     
     query = request.args.get('query', '')
     results = []
@@ -633,10 +736,14 @@ def usda_search():
     if query:
         try:
             results = usda_api.search_foods(query)
+        except requests.exceptions.Timeout:
+            error = "⏱️ Connection timeout: The USDA API is taking too long to respond. This might be due to network restrictions. Please try again later."
+        except requests.exceptions.ConnectionError:
+            error = "🔌 Connection error: Unable to reach the USDA API. Please check your network connection."
         except ValueError as e:
             error = str(e)
         except Exception as e:
-            error = f"Error searching USDA database: {str(e)}"
+            error = f"❌ Error searching USDA database: {str(e)}"
 
     return render_template('admin/usda_search.html',
                            query=query,
@@ -649,10 +756,12 @@ def usda_search():
 def usda_import(fdc_id):
     """Import an ingredient from USDA database"""
     from app.admin.usda_api import usda_api
+    from flask import session
+    import requests
     
     try:
-        # Get current user ID from JWT token
-        current_user_id = get_jwt_identity()
+        # Get current user ID from session
+        current_user_id = session.get('user_id')
         
         # Get ingredient data from USDA
         ingredient_data = usda_api.import_to_ingredient(fdc_id)
@@ -686,6 +795,9 @@ def usda_import(fdc_id):
             existing.saturated_fat_per_100g = ingredient_data.get('saturated_fat_per_100g')
             existing.sugar_per_100g = ingredient_data.get('sugar_per_100g')
             existing.sodium_per_100g = ingredient_data.get('sodium_per_100g')
+            existing.serving_size_grams = ingredient_data.get('serving_size_grams')
+            existing.serving_size_unit = ingredient_data.get('serving_size_unit')
+            existing.serving_size_description = ingredient_data.get('serving_size_description')
             existing.usda_fdc_id = fdc_id
             existing.is_verified = True
             existing.verified_by_id = current_user_id
@@ -708,6 +820,9 @@ def usda_import(fdc_id):
                 saturated_fat_per_100g=ingredient_data.get('saturated_fat_per_100g'),
                 sugar_per_100g=ingredient_data.get('sugar_per_100g'),
                 sodium_per_100g=ingredient_data.get('sodium_per_100g'),
+                serving_size_grams=ingredient_data.get('serving_size_grams'),
+                serving_size_unit=ingredient_data.get('serving_size_unit'),
+                serving_size_description=ingredient_data.get('serving_size_description'),
                 usda_fdc_id=fdc_id,
                 is_verified=True,
                 verified_by_id=current_user_id
@@ -720,9 +835,21 @@ def usda_import(fdc_id):
             flash(f'Ingredient "{ingredient.name}" imported successfully!', 'success')
         
         return redirect(url_for('admin.ingredients'))
-        
+    
+    except requests.exceptions.Timeout:
+        db.session.rollback()
+        logger.error(f"⏱️ USDA API timeout importing FDC ID {fdc_id}")
+        flash('⏱️ Connection timeout: The USDA API is taking too long to respond. Please try again later.', 'error')
+        return redirect(url_for('admin.usda_search'))
+    
+    except requests.exceptions.ConnectionError:
+        db.session.rollback()
+        logger.error(f"🔌 USDA API connection error importing FDC ID {fdc_id}")
+        flash('🔌 Connection error: Unable to reach the USDA API. Please check your network connection.', 'error')
+        return redirect(url_for('admin.usda_search'))
+    
     except Exception as e:
         db.session.rollback()
-        logger.error(f"Error importing from USDA: {str(e)}")
+        logger.error(f"❌ Error importing from USDA: {str(e)}", exc_info=True)
         flash(f'Error importing ingredient: {str(e)}', 'error')
         return redirect(url_for('admin.usda_search'))

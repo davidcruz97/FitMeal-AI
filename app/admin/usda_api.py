@@ -1,3 +1,4 @@
+# app/admin/usda_api.py
 import os
 import requests
 import logging
@@ -39,7 +40,7 @@ class USDAFoodAPI:
 
         try:
             logger.info(f"🔍 USDA API: Searching for '{query}'")
-            response = requests.get(endpoint, params=params, timeout=10)
+            response = requests.get(endpoint, params=params, timeout=30)
             response.raise_for_status()
             data = response.json()
             
@@ -48,6 +49,12 @@ class USDAFoodAPI:
             
             return foods
 
+        except requests.exceptions.Timeout as e:
+            logger.error(f"⏱️ USDA API Timeout: {e}")
+            raise  # Re-raise the exception so the route can catch it
+        except requests.exceptions.ConnectionError as e:    
+            logger.error(f"🔌 USDA API Connection Error: {e}")
+            raise  # Re-raise the exception so the route can catch it
         except requests.exceptions.RequestException as e:
             logger.error(f"❌ USDA API Error: {e}")
             return []
@@ -71,13 +78,19 @@ class USDAFoodAPI:
 
         try:
             logger.info(f"📥 USDA API: Fetching details for FDC ID {fdc_id}")
-            response = requests.get(endpoint, params=params, timeout=10)
+            response = requests.get(endpoint, params=params, timeout=30)
             response.raise_for_status()
             data = response.json()
             
             logger.info(f"✅ USDA API: Retrieved details for '{data.get('description', 'Unknown')}'")
             return data
 
+        except requests.exceptions.Timeout as e:
+            logger.error(f"⏱️ USDA API Timeout fetching FDC ID {fdc_id}: {e}")
+            raise  # Re-raise so the route can catch it
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"🔌 USDA API Connection Error fetching FDC ID {fdc_id}: {e}")
+            raise  # Re-raise so the route can catch it
         except requests.exceptions.RequestException as e:
             logger.error(f"❌ USDA API Error fetching FDC ID {fdc_id}: {e}")
             return None
@@ -148,10 +161,6 @@ class USDAFoodAPI:
 
         logger.debug(f"🔬 Processing {len(food_nutrients)} nutrients from USDA data")
 
-        # Debug: Log the structure of the first few nutrients
-        for i, nutrient_data in enumerate(food_nutrients[:3]):
-            logger.debug(f"📊 Nutrient {i+1} structure: {nutrient_data}")
-
         extracted_count = 0
 
         for nutrient_data in food_nutrients:
@@ -210,6 +219,76 @@ class USDAFoodAPI:
 
         return nutrients
 
+    def extract_portions(self, food_data: Dict) -> Dict:
+        """
+        Extract portion/serving size information from USDA food data
+        
+        Args:
+            food_data: Food details from USDA API
+        
+        Returns:
+            Dictionary with portion information
+        """
+        portion_info = {
+            'serving_size_grams': None,
+            'serving_size_unit': None,
+            'serving_size_description': None
+        }
+        
+        # Method 1: Check for foodPortions (most reliable for RACC)
+        food_portions = food_data.get('foodPortions', [])
+        
+        if food_portions:
+            # Look for RACC portion first
+            for portion in food_portions:
+                portion_desc = portion.get('portionDescription', '').lower()
+                modifier = portion.get('modifier', '').lower()
+                
+                # Check if this is a RACC portion
+                if 'racc' in portion_desc or 'racc' in modifier:
+                    grams = portion.get('gramWeight', 0)
+                    if grams > 0:
+                        portion_info['serving_size_grams'] = round(grams, 1)
+                        portion_info['serving_size_unit'] = 'racc'
+                        portion_info['serving_size_description'] = f"1 RACC ({grams:.0f}g)"
+                        logger.info(f"   📏 Found RACC: {grams:.0f}g")
+                        break
+            
+            # If no RACC found, use first household serving
+            if not portion_info['serving_size_grams'] and food_portions:
+                first_portion = food_portions[0]
+                grams = first_portion.get('gramWeight', 0)
+                amount = first_portion.get('amount', 1.0)
+                modifier = first_portion.get('modifier', '')
+                
+                if grams > 0:
+                    portion_info['serving_size_grams'] = round(grams, 1)
+                    portion_info['serving_size_unit'] = modifier.lower() if modifier else 'serving'
+                    portion_info['serving_size_description'] = f"{amount:.0f} {modifier} ({grams:.0f}g)" if modifier else f"1 serving ({grams:.0f}g)"
+                    logger.info(f"   📏 Found serving: {portion_info['serving_size_description']}")
+        
+        # Method 2: Check servingSize and servingSizeUnit (backup)
+        if not portion_info['serving_size_grams']:
+            serving_size = food_data.get('servingSize')
+            serving_unit = food_data.get('servingSizeUnit', '')
+            
+            if serving_size and serving_size > 0:
+                # Convert to grams if needed
+                if serving_unit.lower() in ['g', 'gram', 'grams']:
+                    portion_info['serving_size_grams'] = round(serving_size, 1)
+                    portion_info['serving_size_unit'] = 'g'
+                    portion_info['serving_size_description'] = f"{serving_size:.0f}g"
+                    logger.info(f"   📏 Found serving size: {serving_size:.0f}g")
+        
+        # If still no portion info, use 100g default
+        if not portion_info['serving_size_grams']:
+            logger.warning(f"   ⚠️ No portion information found - using 50g default")
+            portion_info['serving_size_grams'] = 50.0
+            portion_info['serving_size_unit'] = 'g'
+            portion_info['serving_size_description'] = '50g (default)'
+        
+        return portion_info
+
     def import_to_ingredient(self, fdc_id: int) -> Optional[Dict]:
         """
         Import a food from USDA and format it for our Ingredient model
@@ -229,6 +308,7 @@ class USDAFoodAPI:
             return None
     
         nutrients = self.extract_nutrients(food_data)
+        portions = self.extract_portions(food_data)
         
         food_name = food_data.get('description', '').title()
         category = self._map_category(food_data.get('foodCategory', {}).get('description', None))
@@ -244,13 +324,17 @@ class USDAFoodAPI:
             'saturated_fat_per_100g': nutrients['saturated_fat'] if nutrients['saturated_fat'] > 0 else None,
             'sugar_per_100g': nutrients['sugar'] if nutrients['sugar'] > 0 else None,
             'sodium_per_100g': nutrients['sodium'] if nutrients['sodium'] > 0 else None,
-            'usda_fdc_id': fdc_id
+            'usda_fdc_id': fdc_id,
+            'serving_size_grams': portions['serving_size_grams'],
+            'serving_size_unit': portions['serving_size_unit'],
+            'serving_size_description': portions['serving_size_description']
         }
         
         logger.info(
-            f"✅ Prepared ingredient data: {food_name} | "
+            f"✅ Prepared ingredient: {food_name} | "
             f"Category: {category} | "
-            f"Calories: {nutrients['calories']:.1f}"
+            f"Calories: {nutrients['calories']:.0f} | "
+            f"Serving: {portions['serving_size_description']}"
         )
     
         return ingredient_data

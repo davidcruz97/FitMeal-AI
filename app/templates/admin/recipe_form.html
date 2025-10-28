@@ -277,6 +277,8 @@ const ingredientRowTemplate = `
 function addIngredientRow() {
     const container = document.getElementById('ingredientsContainer');
     container.insertAdjacentHTML('beforeend', ingredientRowTemplate);
+    // Attach listeners to the newly added row
+    attachIngredientListeners();
 }
 
 function removeIngredientRow(button) {
@@ -298,6 +300,50 @@ function previewImage(input, previewId) {
         };
         reader.readAsDataURL(input.files[0]);
     }
+}
+
+// Serving size suggestion functionality
+document.addEventListener('DOMContentLoaded', function() {
+    attachIngredientListeners();
+});
+
+function attachIngredientListeners() {
+    document.querySelectorAll('select[name="ingredient_id[]"]').forEach(function(select) {
+        // Remove existing listener to avoid duplicates
+        select.removeEventListener('change', handleIngredientChange);
+        // Add new listener
+        select.addEventListener('change', handleIngredientChange);
+    });
+}
+
+function handleIngredientChange(event) {
+    updateServingSuggestion(event.target);
+}
+
+function updateServingSuggestion(selectElement) {
+    const ingredientId = selectElement.value;
+    if (!ingredientId) return;
+    
+    const row = selectElement.closest('.ingredient-row');
+    const unitInput = row.querySelector('input[name="unit[]"]');
+    
+    // Fetch ingredient serving info
+    fetch(`/admin/api/ingredients/${ingredientId}/serving`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.serving_size_grams && data.serving_size_unit) {
+                // Update placeholder to show serving suggestion
+                unitInput.placeholder = `e.g., ${data.serving_size_unit} (${data.serving_size_grams}g)`;
+                unitInput.title = `Suggested: ${data.serving_size_description || data.serving_size_unit}`;
+            } else {
+                unitInput.placeholder = 'Unit (g, ml, cups)';
+                unitInput.title = '';
+            }
+        })
+        .catch(err => {
+            console.log('Could not fetch serving info:', err);
+            unitInput.placeholder = 'Unit (g, ml, cups)';
+        });
 }
 </script>
 {% endblock %}

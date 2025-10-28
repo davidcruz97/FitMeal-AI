@@ -48,6 +48,14 @@ def create_app(config_name=None):
     jwt.init_app(app)
     cache.init_app(app)
     csrf.init_app(app)
+    
+    # Exempt API routes from CSRF (they use JWT authentication instead)
+    csrf.exempt('app.api.auth.bp')
+    csrf.exempt('app.api.scan.bp')
+    csrf.exempt('app.api.ingredients.bp')
+    csrf.exempt('app.api.recipes.bp')
+    csrf.exempt('app.api.meals.bp')
+    
     app.config['RATELIMIT_STORAGE_URI'] = app.config['RATELIMIT_STORAGE_URL']
     limiter.init_app(app)
     

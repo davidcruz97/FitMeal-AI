@@ -49,13 +49,6 @@ def create_app(config_name=None):
     cache.init_app(app)
     csrf.init_app(app)
     
-    # Exempt API routes from CSRF (they use JWT authentication instead)
-    csrf.exempt('app.api.auth.bp')
-    csrf.exempt('app.api.scan.bp')
-    csrf.exempt('app.api.ingredients.bp')
-    csrf.exempt('app.api.recipes.bp')
-    csrf.exempt('app.api.meals.bp')
-    
     app.config['RATELIMIT_STORAGE_URI'] = app.config['RATELIMIT_STORAGE_URL']
     limiter.init_app(app)
     
@@ -101,6 +94,14 @@ def create_app(config_name=None):
             app.register_blueprint(api_recipes.bp, url_prefix='/api/recipes')
             from app.api import meals as api_meals
             app.register_blueprint(api_meals.bp, url_prefix='/api/meals')
+            
+            # Exempt API routes from CSRF (they use JWT authentication instead)
+            csrf.exempt(api_auth.bp)
+            csrf.exempt(api_scan.bp)
+            csrf.exempt(api_ingredients.bp)
+            csrf.exempt(api_recipes.bp)
+            csrf.exempt(api_meals.bp)
+    
         except Exception as e:
             app.logger.warning(f"Could not register API blueprints for mobile app: {e}")
           

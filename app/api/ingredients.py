@@ -18,7 +18,6 @@ def search_ingredients():
     Query params:
         q: search query (required)
         limit: max results (default: 10, max: 50)
-        verified_only: return only verified ingredients (default: false)
     
     Example: GET /api/ingredients/search?q=chick&limit=5
     """
@@ -27,9 +26,8 @@ def search_ingredients():
     try:
         query = request.args.get('q', '').strip()
         limit = min(int(request.args.get('limit', 10)), 50)
-        verified_only = request.args.get('verified_only', 'false').lower() == 'true'
         
-        logger.debug(f"🔍 Ingredient search: query='{query}', limit={limit}")
+        logger.debug(f"🔎 Ingredient search: query='{query}', limit={limit}")
         
         if not query:
             return jsonify({'error': 'Search query (q) is required'}), 400
@@ -37,19 +35,8 @@ def search_ingredients():
         if len(query) < 2:
             return jsonify({'error': 'Search query must be at least 2 characters'}), 400
         
-        # Build query
-        if verified_only:
-            ingredients = Ingredient.get_verified_query().filter(
-                db.or_(
-                    Ingredient.name.ilike(f'%{query}%'),
-                    Ingredient.name_es.ilike(f'%{query}%')
-                )
-            ).order_by(
-                Ingredient.usage_count.desc(),
-                Ingredient.name
-            ).limit(limit).all()
-        else:
-            ingredients = Ingredient.search_by_name(query, limit)
+        # Search ingredients
+        ingredients = Ingredient.search_by_name(query, limit)
         
         logger.info(f"✅ Found {len(ingredients)} ingredients for '{query}'")
         
@@ -75,30 +62,20 @@ def list_ingredients():
         page: page number (default: 1)
         per_page: items per page (default: 20, max: 100)
         category: filter by category
-        verified_only: return only verified ingredients (default: false)
-        yolo_only: return only YOLO-detectable ingredients (default: false)
     """
     try:
         page = int(request.args.get('page', 1))
         per_page = min(int(request.args.get('per_page', 20)), 100)
         category = request.args.get('category', '').strip()
-        verified_only = request.args.get('verified_only', 'false').lower() == 'true'
-        yolo_only = request.args.get('yolo_only', 'false').lower() == 'true'
         
         # Build query
-        query = Ingredient.get_active_query()
-        
-        if verified_only:
-            query = query.filter_by(is_verified=True)
-        
-        if yolo_only:
-            query = query.filter_by(yolo_detectable=True)
+        query = Ingredient.query
         
         if category:
             query = query.filter_by(category=category)
         
-        # Order by usage and name
-        query = query.order_by(Ingredient.usage_count.desc(), Ingredient.name)
+        # Order by name
+        query = query.order_by(Ingredient.name)
         
         # Paginate
         pagination = query.paginate(page=page, per_page=per_page, error_out=False)
@@ -130,7 +107,7 @@ def get_ingredient(ingredient_id):
     try:
         ingredient = Ingredient.query.get(ingredient_id)
         
-        if not ingredient or ingredient.is_deleted:
+        if not ingredient:
             return jsonify({'error': 'Ingredient not found'}), 404
         
         return jsonify({
@@ -151,8 +128,6 @@ def get_categories():
         categories = db.session.query(
             Ingredient.category,
             db.func.count(Ingredient.id).label('count')
-        ).filter_by(
-            is_deleted=False
         ).group_by(
             Ingredient.category
         ).all()
@@ -182,8 +157,7 @@ def create_ingredient():
     Request body:
     {
         "name": "Chicken Breast",
-        "name_es": "Pechuga de Pollo",
-        "category": "proteins",
+        "category": "protein",
         "calories_per_100g": 165,
         "protein_per_100g": 31,
         "carbs_per_100g": 0,
@@ -208,17 +182,12 @@ def create_ingredient():
         # Create ingredient
         ingredient = Ingredient(
             name=data.get('name').strip(),
-            name_es=data.get('name_es', '').strip() or None,
             category=data.get('category', 'other'),
             calories_per_100g=float(data.get('calories_per_100g', 0)),
             protein_per_100g=float(data.get('protein_per_100g', 0)),
             carbs_per_100g=float(data.get('carbs_per_100g', 0)),
             fats_per_100g=float(data.get('fats_per_100g', 0)),
-            fiber_per_100g=float(data.get('fiber_per_100g', 0)) if data.get('fiber_per_100g') else None,
-            yolo_detectable=data.get('yolo_detectable', False),
-            yolo_class_name=data.get('yolo_class_name'),
-            is_verified=user.is_nutritionist(),
-            verified_by_id=user.id if user.is_nutritionist() else None
+            fiber_per_100g=float(data.get('fiber_per_100g', 0)) if data.get('fiber_per_100g') else None
         )
         
         db.session.add(ingredient)

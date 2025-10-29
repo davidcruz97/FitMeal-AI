@@ -4,7 +4,7 @@ from app import db
 
 
 class Ingredient(db.Model):
-    """Ingredient model with USDA integration and verification"""
+    """Simplified ingredient model with USDA integration"""
     
     __tablename__ = 'ingredients'
     
@@ -13,9 +13,8 @@ class Ingredient(db.Model):
     
     # Basic Information
     name = db.Column(db.String(255), nullable=False, index=True)
-    name_es = db.Column(db.String(255), nullable=True)  # Spanish name
     category = db.Column(db.String(100), nullable=True, index=True)
-    # Categories: 'vegetables', 'fruits', 'proteins', 'grains', 'dairy', 'oils', 'other'
+    # Categories: 'vegetable', 'fruit', 'protein', 'grain', 'dairy', 'oil', 'other'
     
     # USDA Integration
     usda_fdc_id = db.Column(db.Integer, nullable=True, unique=True, index=True)
@@ -38,22 +37,8 @@ class Ingredient(db.Model):
     serving_size_unit = db.Column(db.String(50), nullable=True, comment='Unit for serving (racc, cup, tbsp, etc)')
     serving_size_description = db.Column(db.String(200), nullable=True, comment='Human-readable serving description')
     
-    # YOLOv8 Detection
-    yolo_detectable = db.Column(db.Boolean, default=False, nullable=False, index=True)
-    yolo_class_name = db.Column(db.String(100), nullable=True, index=True)
-    yolo_class_id = db.Column(db.Integer, nullable=True)
-    
-    # Verification & Quality
-    is_verified = db.Column(db.Boolean, default=False, nullable=False, index=True)
-    # True = Verified from USDA or by nutritionist
-    # False = User-added or needs verification
-    
-    verified_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    verified_at = db.Column(db.DateTime, nullable=True)
-    
-    # Soft Delete
-    is_deleted = db.Column(db.Boolean, default=False, nullable=False, index=True)
-    deleted_at = db.Column(db.DateTime, nullable=True)
+    # Image URL
+    image_url = db.Column(db.String(500), nullable=True)
     
     # Timestamps
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
@@ -64,16 +49,7 @@ class Ingredient(db.Model):
         onupdate=datetime.utcnow
     )
     
-    # Metadata
-    description = db.Column(db.Text, nullable=True)
-    image_url = db.Column(db.String(500), nullable=True)
-    
-    # Usage tracking
-    usage_count = db.Column(db.Integer, default=0, nullable=False)
-    
     # Relationships
-    verified_by = db.relationship('User', foreign_keys=[verified_by_id])
-    
     recipe_ingredients = db.relationship(
         'RecipeIngredient', 
         backref='ingredient', 
@@ -84,30 +60,12 @@ class Ingredient(db.Model):
     def __repr__(self):
         return f'<Ingredient {self.name}>'
     
-    # Soft Delete Methods
-    def soft_delete(self):
-        """Soft delete ingredient"""
-        self.is_deleted = True
-        self.deleted_at = datetime.utcnow()
-        db.session.commit()
-    
-    def restore(self):
-        """Restore soft-deleted ingredient"""
-        self.is_deleted = False
-        self.deleted_at = None
-        db.session.commit()
-    
-    # Verification Methods
-    def verify(self, user_id):
-        """Mark ingredient as verified"""
-        self.is_verified = True
-        self.verified_by_id = user_id
-        self.verified_at = datetime.utcnow()
-        db.session.commit()
-    
     # Nutritional Calculations
     def calculate_macros(self, quantity_grams):
-        """Calculate macros for a specific quantity"""
+        """
+        Calculate macros for a specific quantity
+        Uses ONLY quantity_grams (not any other unit)
+        """
         multiplier = quantity_grams / 100.0
         return {
             'calories': round(self.calories_per_100g * multiplier, 1),
@@ -122,10 +80,7 @@ class Ingredient(db.Model):
         data = {
             'id': self.id,
             'name': self.name,
-            'name_es': self.name_es,
             'category': self.category,
-            'is_verified': self.is_verified,
-            'yolo_detectable': self.yolo_detectable,
             'image_url': self.image_url,
             'serving_size_grams': self.serving_size_grams,
             'serving_size_unit': self.serving_size_unit,
@@ -147,24 +102,10 @@ class Ingredient(db.Model):
         return data
     
     @staticmethod
-    def get_active_query():
-        """Query helper to exclude soft-deleted ingredients"""
-        return Ingredient.query.filter_by(is_deleted=False)
-    
-    @staticmethod
-    def get_verified_query():
-        """Query helper to get only verified ingredients"""
-        return Ingredient.query.filter_by(is_deleted=False, is_verified=True)
-    
-    @staticmethod
     def search_by_name(query_string, limit=10):
         """Search ingredients by name (for autocomplete)"""
-        return Ingredient.get_active_query().filter(
-            db.or_(
-                Ingredient.name.ilike(f'%{query_string}%'),
-                Ingredient.name_es.ilike(f'%{query_string}%')
-            )
+        return Ingredient.query.filter(
+            Ingredient.name.ilike(f'%{query_string}%')
         ).order_by(
-            Ingredient.usage_count.desc(),
             Ingredient.name
         ).limit(limit).all()

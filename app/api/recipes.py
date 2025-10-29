@@ -150,8 +150,8 @@ def list_recipes():
         if search:
             query = query.filter(Recipe.name.ilike(f'%{search}%'))
         
-        # Order by popularity
-        query = query.order_by(Recipe.view_count.desc(), Recipe.created_at.desc())
+        # Order by creation date (newest first)
+        query = query.order_by(Recipe.created_at.desc())
         
         # Paginate
         pagination = query.paginate(page=page, per_page=per_page, error_out=False)
@@ -190,12 +190,9 @@ def get_recipe(recipe_id):
     try:
         recipe = Recipe.query.get(recipe_id)
         
-        if not recipe or recipe.is_deleted or not recipe.is_published:
-            logger.warning(f"⚠️  Recipe not found: {recipe_id}")
+        if not recipe or not recipe.is_published:
+            logger.warning(f"⚠️ Recipe not found: {recipe_id}")
             return jsonify({'error': 'Recipe not found'}), 404
-        
-        # Increment view count
-        recipe.increment_view()
         
         # Get servings from query param
         servings = request.args.get('servings', type=int)
@@ -212,7 +209,7 @@ def get_recipe(recipe_id):
         
         logger.info(
             f"✅ Retrieved recipe: {recipe.name} (ID: {recipe_id}) | "
-            f"Views: {recipe.view_count} | Category: {recipe.category}"
+            f"Category: {recipe.category}"
         )
         
         return jsonify({
@@ -235,7 +232,6 @@ def get_categories():
             Recipe.category,
             db.func.count(Recipe.id).label('count')
         ).filter_by(
-            is_deleted=False,
             is_published=True
         ).group_by(
             Recipe.category
@@ -272,7 +268,7 @@ def get_tags():
             tags = recipe.get_tags_list()
             all_tags.update(tags)
         
-        logger.debug(f"🏷️  Retrieved {len(all_tags)} unique tags")
+        logger.debug(f"🏷️ Retrieved {len(all_tags)} unique tags")
         
         return jsonify({
             'tags': sorted(list(all_tags))
@@ -301,8 +297,9 @@ def create_recipe():
         "ingredients": [
             {
                 "ingredient_id": 6,
-                "quantity": 200,
-                "unit": "g",
+                "quantity": 1,
+                "unit": "breast",
+                "quantity_grams": 200,
                 "ingredient_type": "main"
             }
         ]
@@ -327,7 +324,7 @@ def create_recipe():
             return jsonify({'error': 'Name and instructions are required'}), 400
         
         recipe_name = data.get('name').strip()
-        logger.info(f"📝 Creating recipe: {recipe_name} [User: {user.email}]")
+        logger.info(f"🍳 Creating recipe: {recipe_name} [User: {user.email}]")
         
         # Create recipe
         recipe = Recipe(
@@ -340,7 +337,6 @@ def create_recipe():
             difficulty=data.get('difficulty'),
             tags=data.get('tags'),
             created_by_id=user.id,
-            is_verified=user.is_admin(),
             is_published=data.get('is_published', True)
         )
         

@@ -28,13 +28,7 @@
                     <label class="form-label">Recipe Name *</label>
                     <input type="text" name="name" class="form-control" value="{{ recipe.name if recipe else '' }}" required>
                 </div>
-
-                <!-- Recipe Name (Spanish) -->
-                <div class="form-group">
-                    <label class="form-label">Recipe Name (Spanish)</label>
-                    <input type="text" name="name_es" class="form-control" value="{{ recipe.name_es if recipe else '' }}">
-                </div>
-
+                
                 <!-- Category -->
                 <div class="form-group">
                     <label class="form-label">Category</label>
@@ -200,6 +194,7 @@
                         </select>
                         <input type="number" name="quantity[]" class="form-control" placeholder="Quantity" value="{{ ri.quantity }}" step="0.01" min="0" style="flex: 1;" required>
                         <input type="text" name="unit[]" class="form-control" placeholder="Unit" value="{{ ri.unit }}" style="flex: 1;" required>
+                        <input type="number" name="quantity_grams[]" class="form-control" placeholder="Grams" value="{{ ri.quantity_grams }}" step="0.1" min="0" style="flex: 1;" required>
                         <select name="ingredient_type[]" class="form-control" style="flex: 1;">
                             <option value="main" {% if ri.ingredient_type == 'main' %}selected{% endif %}>Main</option>
                             <option value="optional" {% if ri.ingredient_type == 'optional' %}selected{% endif %}>Optional</option>
@@ -220,6 +215,7 @@
                         </select>
                         <input type="number" name="quantity[]" class="form-control" placeholder="Quantity" step="0.01" min="0" style="flex: 1;" required>
                         <input type="text" name="unit[]" class="form-control" placeholder="Unit (g, ml, cups)" style="flex: 1;" required>
+                        <input type="number" name="quantity_grams[]" class="form-control" placeholder="Grams" step="0.1" min="0" style="flex: 1;" required>
                         <select name="ingredient_type[]" class="form-control" style="flex: 1;">
                             <option value="main" selected>Main</option>
                             <option value="optional">Optional</option>
@@ -263,6 +259,7 @@ const ingredientRowTemplate = `
         </select>
         <input type="number" name="quantity[]" class="form-control" placeholder="Quantity" step="0.01" min="0" style="flex: 1;" required>
         <input type="text" name="unit[]" class="form-control" placeholder="Unit (g, ml, cups)" style="flex: 1;" required>
+        <input type="number" name="quantity_grams[]" class="form-control" placeholder="Grams" step="0.1" min="0" style="flex: 1;" required>
         <select name="ingredient_type[]" class="form-control" style="flex: 1;">
             <option value="main" selected>Main</option>
             <option value="optional">Optional</option>

@@ -45,7 +45,7 @@ def login():
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         
-        user = User.query.filter_by(email=email, is_deleted=False).first()
+        user = User.query.filter_by(email=email).first()
         
         if user and user.check_password(password) and user.is_nutritionist():
             from flask import session
@@ -82,20 +82,20 @@ def dashboard():
     logger = current_app.logger
     
     # Get statistics
-    total_recipes = Recipe.get_active_query().count()
-    published_recipes = Recipe.get_published_query().count()
-    total_ingredients = Ingredient.get_active_query().count()
-    verified_ingredients = Ingredient.get_verified_query().count()
-    total_users = User.get_active_query().filter_by(user_type='user').count()
+    total_recipes = Recipe.query.count()
+    published_recipes = Recipe.query.filter_by(is_published=True).count()
+    total_ingredients = Ingredient.query.count()
+    verified_ingredients = Ingredient.query.count()
+    total_users = User.query.filter_by(user_type='user').count()
     
     # Recent recipes
-    recent_recipes = Recipe.get_active_query().order_by(
+    recent_recipes = Recipe.query.order_by(
         Recipe.created_at.desc()
     ).limit(5).all()
     
     # Popular recipes
-    popular_recipes = Recipe.get_published_query().order_by(
-        Recipe.view_count.desc()
+    popular_recipes = Recipe.query.filter_by(is_published=True).order_by(
+        Recipe.created_at.desc()
     ).limit(5).all()
     
     logger.info(f"📊 Admin dashboard accessed | Recipes: {total_recipes} | Ingredients: {total_ingredients}")
@@ -122,7 +122,7 @@ def users():
     """List all users"""
     page = request.args.get('page', 1, type=int)
     
-    query = User.get_active_query().filter_by(user_type='user')
+    query = User.query.filter_by(user_type='user')
     query = query.order_by(User.created_at.desc())
     
     pagination = query.paginate(page=page, per_page=20, error_out=False)
@@ -141,7 +141,7 @@ def recipes():
     category = request.args.get('category', '')
     search = request.args.get('search', '')
     
-    query = Recipe.get_active_query()
+    query = Recipe.query
     
     if category:
         query = query.filter_by(category=category)
@@ -171,7 +171,6 @@ def recipe_create():
         try:
             # Get form data
             name = request.form.get('name', '').strip()
-            name_es = request.form.get('name_es', '').strip()
             category = request.form.get('category', 'lunch')
             description = request.form.get('description', '').strip()
             instructions = request.form.get('instructions', '').strip()
@@ -190,7 +189,6 @@ def recipe_create():
             # Create recipe
             recipe = Recipe(
                 name=name,
-                name_es=name_es or None,
                 category=category,
                 description=description or None,
                 instructions=instructions,
@@ -200,7 +198,6 @@ def recipe_create():
                 difficulty=difficulty,
                 tags=tags or None,
                 created_by_id=session['user_id'],
-                is_verified=True,
                 is_published=is_published
             )
             
@@ -241,20 +238,17 @@ def recipe_create():
             ingredient_ids = request.form.getlist('ingredient_id[]')
             quantities = request.form.getlist('quantity[]')
             units = request.form.getlist('unit[]')
+            quantity_grams_list = request.form.getlist('quantity_grams[]')
             types = request.form.getlist('ingredient_type[]')
-            
-            for idx, ing_id in enumerate(ingredient_ids):
-                if ing_id and quantities[idx]:
-                    # Get ingredient first
-                    ingredient = Ingredient.query.get(int(ing_id))
-                    quantity_grams = convert_to_grams(float(quantities[idx]), units[idx], ingredient)
 
+            for idx, ing_id in enumerate(ingredient_ids):
+                if ing_id and quantities[idx] and quantity_grams_list[idx]:
                     recipe_ingredient = RecipeIngredient(
                         recipe_id=recipe.id,
                         ingredient_id=int(ing_id),
                         quantity=float(quantities[idx]),
                         unit=units[idx],
-                        quantity_grams=quantity_grams,
+                        quantity_grams=float(quantity_grams_list[idx]),  # Direct from form
                         ingredient_type=types[idx] if idx < len(types) else 'main',
                         order_index=idx
                     )
@@ -274,7 +268,7 @@ def recipe_create():
             return redirect(url_for('admin.recipe_create'))
     
     # GET request - show form
-    ingredients = Ingredient.get_active_query().order_by(Ingredient.name).all()
+    ingredients = Ingredient.query.order_by(Ingredient.name).all()
     form = RecipeForm()
     return render_template('admin/recipe_form.html', 
                          recipe=None,
@@ -288,14 +282,10 @@ def recipe_view(recipe_id):
     """View recipe details"""
     recipe = Recipe.query.get_or_404(recipe_id)
     
-    if recipe.is_deleted:
-        flash('Recipe not found', 'error')
-        return redirect(url_for('admin.recipes'))
-    
     # Calculate nutritional info
     nutritional_info = recipe.calculate_macros()
     
-    ingredients = Ingredient.get_active_query().order_by(Ingredient.name).all()
+    ingredients = Ingredient.query.order_by(Ingredient.name).all()
     
     return render_template('admin/recipe_form.html',
                      recipe=recipe,
@@ -314,15 +304,10 @@ def recipe_edit(recipe_id):
     
     recipe = Recipe.query.get_or_404(recipe_id)
     
-    if recipe.is_deleted:
-        flash('Recipe not found', 'error')
-        return redirect(url_for('admin.recipes'))
-    
     if request.method == 'POST':
         try:
             # Update fields
             recipe.name = request.form.get('name', '').strip()
-            recipe.name_es = request.form.get('name_es', '').strip() or None
             recipe.category = request.form.get('category', 'lunch')
             recipe.description = request.form.get('description', '').strip() or None
             recipe.instructions = request.form.get('instructions', '').strip()
@@ -380,20 +365,17 @@ def recipe_edit(recipe_id):
             ingredient_ids = request.form.getlist('ingredient_id[]')
             quantities = request.form.getlist('quantity[]')
             units = request.form.getlist('unit[]')
+            quantity_grams_list = request.form.getlist('quantity_grams[]')
             types = request.form.getlist('ingredient_type[]')
-            
+
             for idx, ing_id in enumerate(ingredient_ids):
-                if ing_id and quantities[idx]:
-                    # Get ingredient first
-                    ingredient = Ingredient.query.get(int(ing_id))
-                    quantity_grams = convert_to_grams(float(quantities[idx]), units[idx], ingredient)
-                    
+                if ing_id and quantities[idx] and quantity_grams_list[idx]:
                     recipe_ingredient = RecipeIngredient(
                         recipe_id=recipe.id,
                         ingredient_id=int(ing_id),
                         quantity=float(quantities[idx]),
                         unit=units[idx],
-                        quantity_grams=quantity_grams,
+                        quantity_grams=float(quantity_grams_list[idx]),  # Direct from form
                         ingredient_type=types[idx] if idx < len(types) else 'main',
                         order_index=idx
                     )
@@ -412,7 +394,7 @@ def recipe_edit(recipe_id):
             flash(f'Error updating recipe: {str(e)}', 'error')
     
     # GET request - show form
-    ingredients = Ingredient.get_active_query().order_by(Ingredient.name).all()
+    ingredients = Ingredient.query.order_by(Ingredient.name).all()
     form = RecipeForm(obj=recipe)
     return render_template('admin/recipe_form.html',
                          recipe=recipe,
@@ -480,52 +462,6 @@ def toggle_publish_recipe(recipe_id):
 
 # ==================== INGREDIENT MANAGEMENT ====================
 
-def convert_to_grams(quantity, unit, ingredient=None):
-    """
-    Convert various units to grams for nutritional calculations
-    Uses ingredient serving size when available
-    """
-    unit = unit.lower().strip()
-    
-    # Already in grams
-    if unit in ['g', 'gram', 'grams']:
-        return quantity
-    
-    # Use ingredient's serving size if unit matches
-    if ingredient and ingredient.serving_size_grams and ingredient.serving_size_unit:
-        if unit == ingredient.serving_size_unit.lower():
-            return quantity * ingredient.serving_size_grams
-    
-    # Volume to weight (approximate)
-    if unit in ['ml', 'milliliter', 'milliliters']:
-        return quantity
-    
-    if unit in ['cup', 'cups']:
-        return quantity * 240
-    
-    if unit in ['tbsp', 'tablespoon', 'tablespoons']:
-        return quantity * 15
-    
-    if unit in ['tsp', 'teaspoon', 'teaspoons', 'tea spoon']:
-        return quantity * 5
-    
-    # Common units
-    if unit in ['scoop', 'scoops']:
-        return quantity * 30
-    
-    # Generic units (use ingredient-specific if available)
-    if unit in ['unit', 'units', 'piece', 'pieces']:
-        if ingredient:
-            name_lower = ingredient.name.lower()
-            if 'egg' in name_lower:
-                return quantity * 50
-            elif 'bread' in name_lower or 'slice' in name_lower:
-                return quantity * 30
-        return quantity * 100  # Default
-    
-    # Default: assume 100g per unit
-    return quantity * 100
-
 @bp.route('/ingredients')
 @admin_required
 def ingredients():
@@ -534,17 +470,14 @@ def ingredients():
     category = request.args.get('category', '')
     search = request.args.get('search', '')
     
-    query = Ingredient.get_active_query()
+    query = Ingredient.query
     
     if category:
         query = query.filter_by(category=category)
     
     if search:
         query = query.filter(
-            db.or_(
-                Ingredient.name.ilike(f'%{search}%'),
-                Ingredient.name_es.ilike(f'%{search}%')
-            )
+            Ingredient.name.ilike(f'%{search}%')
         )
     
     query = query.order_by(Ingredient.name)
@@ -568,7 +501,6 @@ def ingredient_create():
     
     try:
         name = request.form.get('name', '').strip()
-        name_es = request.form.get('name_es', '').strip()
         category = request.form.get('category', 'other')
         
         if not name:
@@ -577,17 +509,12 @@ def ingredient_create():
         
         ingredient = Ingredient(
             name=name,
-            name_es=name_es or None,
             category=category,
             calories_per_100g=float(request.form.get('calories_per_100g', 0)),
             protein_per_100g=float(request.form.get('protein_per_100g', 0)),
             carbs_per_100g=float(request.form.get('carbs_per_100g', 0)),
             fats_per_100g=float(request.form.get('fats_per_100g', 0)),
-            fiber_per_100g=float(request.form.get('fiber_per_100g') or 0) or None,
-            yolo_detectable=request.form.get('yolo_detectable') == 'on',
-            yolo_class_name=request.form.get('yolo_class_name', '').strip() or None,
-            is_verified=True,
-            verified_by_id=session['user_id']
+            fiber_per_100g=float(request.form.get('fiber_per_100g') or 0) or None
         )
         
         db.session.add(ingredient)
@@ -615,15 +542,12 @@ def ingredient_update(ingredient_id):
     
     try:
         ingredient.name = request.form.get('name', '').strip()
-        ingredient.name_es = request.form.get('name_es', '').strip() or None
         ingredient.category = request.form.get('category', 'other')
         ingredient.calories_per_100g = float(request.form.get('calories_per_100g', 0))
         ingredient.protein_per_100g = float(request.form.get('protein_per_100g', 0))
         ingredient.carbs_per_100g = float(request.form.get('carbs_per_100g', 0))
         ingredient.fats_per_100g = float(request.form.get('fats_per_100g', 0))
         ingredient.fiber_per_100g = float(request.form.get('fiber_per_100g') or 0) or None
-        ingredient.yolo_detectable = request.form.get('yolo_detectable') == 'on'
-        ingredient.yolo_class_name = request.form.get('yolo_class_name', '').strip() or None
         
         db.session.commit()
         
@@ -687,7 +611,7 @@ def get_ingredient_serving(ingredient_id):
     """Get serving size info for an ingredient"""
     ingredient = Ingredient.query.get(ingredient_id)
     
-    if not ingredient or ingredient.is_deleted:
+    if not ingredient:
         return jsonify({'error': 'Ingredient not found'}), 404
     
     return jsonify({
@@ -707,11 +631,8 @@ def api_search_ingredients():
     if len(query) < 2:
         return jsonify([])
     
-    ingredients = Ingredient.get_active_query().filter(
-        db.or_(
-            Ingredient.name.ilike(f'%{query}%'),
-            Ingredient.name_es.ilike(f'%{query}%')
-        )
+    ingredients = Ingredient.query.filter(
+        Ingredient.name.ilike(f'%{query}%')
     ).order_by(Ingredient.name).limit(20).all()
     
     return jsonify([{
@@ -782,7 +703,6 @@ def usda_import(fdc_id):
             # Restore if soft-deleted
             if existing.deleted_at:
                 existing.deleted_at = None
-                existing.is_deleted = False
                 logger.info(f"♻️ Restored soft-deleted ingredient: {existing.name}")
             
             # Update with new USDA data
@@ -824,7 +744,6 @@ def usda_import(fdc_id):
                 serving_size_unit=ingredient_data.get('serving_size_unit'),
                 serving_size_description=ingredient_data.get('serving_size_description'),
                 usda_fdc_id=fdc_id,
-                is_verified=True,
                 verified_by_id=current_user_id
             )
             

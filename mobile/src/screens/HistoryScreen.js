@@ -8,14 +8,15 @@ import {
   TouchableOpacity,
   RefreshControl,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { getMealHistory, getNutritionStats } from '../api/meals';
+import { getMealHistory, getNutritionStats, deleteMealLog } from '../api/meals';
 import Colors from '../constants/colors';
 
 const HistoryScreen = () => {
-  const [days, setDays] = useState(7);
+  const [days, setDays] = useState(1);
   const [history, setHistory] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -47,7 +48,29 @@ const HistoryScreen = () => {
     loadData();
   };
 
-  // Backend returns stats under 'stats' object with specific field names
+  const handleDeleteMeal = (mealId, recipeName) => {
+    Alert.alert(
+      'Delete Meal',
+      `Are you sure you want to delete "${recipeName}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteMealLog(mealId);
+              loadData();
+            } catch (error) {
+              console.error('Error deleting meal:', error);
+              Alert.alert('Error', 'Failed to delete meal');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const statsData = stats?.stats || {};
   
   const averageStats = {
@@ -65,7 +88,6 @@ const HistoryScreen = () => {
     meal_count: statsData.total_meals || 0,
   };
 
-  // Group meals by date
   const groupedMeals = history.reduce((groups, meal) => {
     const date = new Date(meal.consumed_at).toLocaleDateString();
     if (!groups[date]) {
@@ -83,9 +105,8 @@ const HistoryScreen = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-      {/* Time Period Selector */}
       <View style={styles.periodSelector}>
-        {[7, 14, 30].map((period) => (
+        {[1, 7, 30].map((period) => (
           <TouchableOpacity
             key={period}
             style={[
@@ -100,13 +121,12 @@ const HistoryScreen = () => {
                 days === period && styles.periodTextActive,
               ]}
             >
-              {period} days
+              {period === 1 ? 'today' : `${period} days`}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* Summary Stats */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Average Daily Intake</Text>
         <View style={styles.statsRow}>
@@ -137,9 +157,8 @@ const HistoryScreen = () => {
         </View>
       </View>
 
-      {/* Total Stats */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Total ({days} days)</Text>
+        <Text style={styles.cardTitle}>Total ({days === 1 ? 'today' : `${days} days`})</Text>
         <View style={styles.totalStats}>
           <View style={styles.totalItem}>
             <FontAwesome5 name="utensils" size={14} color={Colors.text} />
@@ -156,7 +175,6 @@ const HistoryScreen = () => {
         </View>
       </View>
 
-      {/* Meal History */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Meal History</Text>
 
@@ -165,7 +183,11 @@ const HistoryScreen = () => {
             <View key={date} style={styles.dateGroup}>
               <Text style={styles.dateHeader}>{date}</Text>
               {meals.map((meal, index) => (
-                <MealHistoryItem key={index} meal={meal} />
+                <MealHistoryItem 
+                  key={index} 
+                  meal={meal} 
+                  onDelete={() => handleDeleteMeal(meal.id, meal.recipe?.name || 'Unknown Recipe')}
+                />
               ))}
             </View>
           ))
@@ -192,11 +214,9 @@ const StatItem = ({ label, value, unit, color }) => (
   </View>
 );
 
-const MealHistoryItem = ({ meal }) => {
-  // Safely get values with defaults
-  const calories = meal.calories_logged || 0;
+const MealHistoryItem = ({ meal, onDelete }) => {
+  const calories = meal.nutritional_info?.calories || 0;
   const servings = meal.servings_consumed || meal.servings || 1;
-  // Try multiple possible field names for recipe name
   const recipeName = meal.recipe?.name || meal.recipe_name || 'Unknown Recipe';
   const mealType = meal.meal_type || 'meal';
 
@@ -210,12 +230,17 @@ const MealHistoryItem = ({ meal }) => {
           {servings > 1 && ` • ${servings} servings`}
         </Text>
       </View>
-      <Text style={styles.historyTime}>
-        {new Date(meal.consumed_at).toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-        })}
-      </Text>
+      <View style={styles.historyActions}>
+        <Text style={styles.historyTime}>
+          {new Date(meal.consumed_at).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+          })}
+        </Text>
+        <TouchableOpacity onPress={onDelete} style={styles.deleteButton}>
+          <FontAwesome5 name="trash" size={16} color={Colors.error} />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -361,9 +386,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.textSecondary,
   },
+  historyActions: {
+    alignItems: 'flex-end',
+    gap: 8,
+  },
   historyTime: {
     fontSize: 13,
     color: Colors.textSecondary,
+  },
+  deleteButton: {
+    padding: 4,
   },
   emptyState: {
     alignItems: 'center',

@@ -161,7 +161,7 @@ const MacroCard = ({ label, value, unit, color }) => (
 const MealItem = ({ meal }) => {
   console.log('MealItem - meal object:', JSON.stringify(meal, null, 2));
   
-  const calories = meal.calories_logged || 0;
+  const calories = meal.nutritional_info?.calories || 0;
   // Try multiple possible field names for recipe name
   const recipeName = meal.recipe?.name || meal.recipe_name || 'Unknown Recipe';
   const mealType = meal.meal_type || 'meal';

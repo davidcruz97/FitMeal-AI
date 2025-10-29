@@ -319,7 +319,7 @@ def get_meal(meal_id):
 @bp.route('/<int:meal_id>', methods=['DELETE'])
 @jwt_required()
 def delete_meal(meal_id):
-    """Delete (soft delete) a meal log"""
+    """Delete (hard delete) a meal log permanently"""
     logger = current_app.logger
     user_id = int(get_jwt_identity())
     
@@ -339,8 +339,9 @@ def delete_meal(meal_id):
         
         recipe_name = meal.recipe.name if meal.recipe else 'Unknown'
         
-        # Soft delete
-        meal.soft_delete()
+        # Hard delete
+        db.session.delete(meal)
+        db.session.commit()
         
         logger.info(f"🗑️  Meal deleted: {meal_id} ({recipe_name}) [User: {user_id}]")
         

@@ -1,3 +1,4 @@
+// mobile/src/api/meals.js
 import apiClient from './client';
 
 // Log a consumed meal
@@ -51,7 +52,7 @@ export const getTodayMeals = async () => {
 // Delete meal log
 export const deleteMealLog = async (mealLogId) => {
   try {
-    const response = await apiClient.delete(`/meals/log/${mealLogId}`);
+    const response = await apiClient.delete(`/meals/${mealLogId}`);
     return response.data;
   } catch (error) {
     throw error;

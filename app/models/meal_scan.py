@@ -60,7 +60,8 @@ class RecipeIngredient(db.Model):
         """Convert to dictionary for API responses"""
         return {
             'id': self.id,
-            'ingredient': self.ingredient.to_dict(include_nutritional=False) if self.ingredient else None,
+            'ingredient_id': self.ingredient_id,
+            'name': self.ingredient.name if self.ingredient else 'Unknown',
             'quantity': self.quantity,
             'unit': self.unit,
             'quantity_grams': self.quantity_grams,

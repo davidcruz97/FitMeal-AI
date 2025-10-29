@@ -156,7 +156,7 @@ def map_yolo_to_ingredients(yolo_detections):
                 'detected_as': yolo_class,
                 'confidence': confidence,
                 'source': 'yolo',
-                'verified': ingredient['is_verified']
+                
             })
             logger.debug(f"   ✓ Matched '{yolo_class}' → '{ingredient['name']}'")
         else:
@@ -208,7 +208,7 @@ def map_clarifai_to_ingredients(clarifai_detections):
                 'detected_as': food_name,
                 'confidence': confidence,
                 'source': 'clarifai',
-                'verified': ingredient['is_verified']
+                
             })
             logger.debug(f"   ✓ Matched '{food_name}' → '{ingredient['name']}'")
         else:

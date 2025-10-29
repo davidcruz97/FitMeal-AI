@@ -180,11 +180,21 @@
                 </button>
             </div>
 
+            <!-- Column Headers -->
+            <div style="display: flex; gap: 10px; margin-bottom: 10px; padding: 0 5px; font-weight: 600; color: var(--text-secondary); font-size: 13px;">
+                <div style="flex: 2;">Ingredient</div>
+                <div style="flex: 1;">Quantity</div>
+                <div style="flex: 1;">Unit</div>
+                <div style="flex: 1;">Grams</div>
+                <div style="flex: 1;">Type</div>
+                <div style="width: 36px;"></div>
+            </div>
+
             <div id="ingredientsContainer">
                 {% if recipe and recipe.recipe_ingredients %}
                     {% for ri in recipe.recipe_ingredients %}
                     <div class="ingredient-row" style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
-                        <select name="ingredient_id[]" class="form-control" style="flex: 2;" required>
+                        <select name="ingredient_id[]" class="form-control ingredient-select" style="flex: 2;" required data-ingredient-id="{{ ri.ingredient_id }}">
                             <option value="">Select ingredient...</option>
                             {% for ingredient in ingredients %}
                             <option value="{{ ingredient.id }}" {% if ri.ingredient_id == ingredient.id %}selected{% endif %}>
@@ -192,9 +202,9 @@
                             </option>
                             {% endfor %}
                         </select>
-                        <input type="number" name="quantity[]" class="form-control" placeholder="Quantity" value="{{ ri.quantity }}" step="0.01" min="0" style="flex: 1;" required>
-                        <input type="text" name="unit[]" class="form-control" placeholder="Unit" value="{{ ri.unit }}" style="flex: 1;" required>
-                        <input type="number" name="quantity_grams[]" class="form-control" placeholder="Grams" value="{{ ri.quantity_grams }}" step="0.1" min="0" style="flex: 1;" required>
+                        <input type="number" name="quantity[]" class="form-control quantity-input" placeholder="1.0" value="{{ ri.quantity }}" step="0.01" min="0" style="flex: 1;" required>
+                        <input type="text" name="unit[]" class="form-control unit-input" placeholder="Unit" value="{{ ri.unit }}" style="flex: 1;" required>
+                        <input type="number" name="quantity_grams[]" class="form-control grams-input" placeholder="100" value="{{ ri.quantity_grams }}" step="0.1" min="0" style="flex: 1;" required title="Total grams for this ingredient">
                         <select name="ingredient_type[]" class="form-control" style="flex: 1;">
                             <option value="main" {% if ri.ingredient_type == 'main' %}selected{% endif %}>Main</option>
                             <option value="optional" {% if ri.ingredient_type == 'optional' %}selected{% endif %}>Optional</option>
@@ -207,15 +217,15 @@
                     {% endfor %}
                 {% else %}
                     <div class="ingredient-row" style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
-                        <select name="ingredient_id[]" class="form-control" style="flex: 2;" required>
+                        <select name="ingredient_id[]" class="form-control ingredient-select" style="flex: 2;" required>
                             <option value="">Select ingredient...</option>
                             {% for ingredient in ingredients %}
                             <option value="{{ ingredient.id }}">{{ ingredient.name }}</option>
                             {% endfor %}
                         </select>
-                        <input type="number" name="quantity[]" class="form-control" placeholder="Quantity" step="0.01" min="0" style="flex: 1;" required>
-                        <input type="text" name="unit[]" class="form-control" placeholder="Unit (g, ml, cups)" style="flex: 1;" required>
-                        <input type="number" name="quantity_grams[]" class="form-control" placeholder="Grams" step="0.1" min="0" style="flex: 1;" required>
+                        <input type="number" name="quantity[]" class="form-control quantity-input" placeholder="1.0" step="0.01" min="0" style="flex: 1;" required>
+                        <input type="text" name="unit[]" class="form-control unit-input" placeholder="Unit" style="flex: 1;" required>
+                        <input type="number" name="quantity_grams[]" class="form-control grams-input" placeholder="100" step="0.1" min="0" style="flex: 1;" required title="Total grams for this ingredient">
                         <select name="ingredient_type[]" class="form-control" style="flex: 1;">
                             <option value="main" selected>Main</option>
                             <option value="optional">Optional</option>
@@ -230,7 +240,8 @@
 
             <small class="form-help">
                 <i class="fas fa-info-circle"></i>
-                Can't find an ingredient? <a href="{{ url_for('admin.ingredients') }}" target="_blank">Add it here</a> first.
+                Can't find an ingredient? <a href="{{ url_for('admin.ingredients') }}" target="_blank">Add it here</a> first. 
+                <strong>Tip:</strong> Select an ingredient to auto-fill serving suggestions from USDA data.
             </small>
         </div>
 
@@ -251,15 +262,15 @@
 // Ingredient row template
 const ingredientRowTemplate = `
     <div class="ingredient-row" style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center;">
-        <select name="ingredient_id[]" class="form-control" style="flex: 2;" required>
+        <select name="ingredient_id[]" class="form-control ingredient-select" style="flex: 2;" required>
             <option value="">Select ingredient...</option>
             {% for ingredient in ingredients %}
             <option value="{{ ingredient.id }}">{{ ingredient.name }}</option>
             {% endfor %}
         </select>
-        <input type="number" name="quantity[]" class="form-control" placeholder="Quantity" step="0.01" min="0" style="flex: 1;" required>
-        <input type="text" name="unit[]" class="form-control" placeholder="Unit (g, ml, cups)" style="flex: 1;" required>
-        <input type="number" name="quantity_grams[]" class="form-control" placeholder="Grams" step="0.1" min="0" style="flex: 1;" required>
+        <input type="number" name="quantity[]" class="form-control quantity-input" placeholder="1.0" step="0.01" min="0" style="flex: 1;" required>
+        <input type="text" name="unit[]" class="form-control unit-input" placeholder="Unit" style="flex: 1;" required>
+        <input type="number" name="quantity_grams[]" class="form-control grams-input" placeholder="100" step="0.1" min="0" style="flex: 1;" required title="Total grams for this ingredient">
         <select name="ingredient_type[]" class="form-control" style="flex: 1;">
             <option value="main" selected>Main</option>
             <option value="optional">Optional</option>
@@ -299,17 +310,23 @@ function previewImage(input, previewId) {
     }
 }
 
-// Serving size suggestion functionality
+// Auto-fill functionality with RACC data
 document.addEventListener('DOMContentLoaded', function() {
     attachIngredientListeners();
 });
 
 function attachIngredientListeners() {
-    document.querySelectorAll('select[name="ingredient_id[]"]').forEach(function(select) {
+    document.querySelectorAll('.ingredient-select').forEach(function(select) {
         // Remove existing listener to avoid duplicates
         select.removeEventListener('change', handleIngredientChange);
         // Add new listener
         select.addEventListener('change', handleIngredientChange);
+    });
+    
+    // Also attach listeners to quantity inputs to calculate grams
+    document.querySelectorAll('.quantity-input').forEach(function(input) {
+        input.removeEventListener('input', handleQuantityChange);
+        input.addEventListener('input', handleQuantityChange);
     });
 }
 
@@ -317,29 +334,77 @@ function handleIngredientChange(event) {
     updateServingSuggestion(event.target);
 }
 
+function handleQuantityChange(event) {
+    const row = event.target.closest('.ingredient-row');
+    const quantityInput = row.querySelector('.quantity-input');
+    const gramsInput = row.querySelector('.grams-input');
+    
+    // Get the stored RACC grams if available
+    const raccGrams = parseFloat(row.dataset.raccGrams || 0);
+    const quantity = parseFloat(quantityInput.value || 0);
+    
+    if (raccGrams > 0 && quantity > 0) {
+        // Auto-calculate total grams based on quantity × RACC
+        const totalGrams = quantity * raccGrams;
+        gramsInput.value = totalGrams.toFixed(1);
+    }
+}
+
 function updateServingSuggestion(selectElement) {
     const ingredientId = selectElement.value;
     if (!ingredientId) return;
     
     const row = selectElement.closest('.ingredient-row');
-    const unitInput = row.querySelector('input[name="unit[]"]');
+    const quantityInput = row.querySelector('.quantity-input');
+    const unitInput = row.querySelector('.unit-input');
+    const gramsInput = row.querySelector('.grams-input');
     
-    // Fetch ingredient serving info
+    // Fetch ingredient serving info from USDA
     fetch(`/admin/api/ingredients/${ingredientId}/serving`)
         .then(response => response.json())
         .then(data => {
             if (data.serving_size_grams && data.serving_size_unit) {
-                // Update placeholder to show serving suggestion
-                unitInput.placeholder = `e.g., ${data.serving_size_unit} (${data.serving_size_grams}g)`;
-                unitInput.title = `Suggested: ${data.serving_size_description || data.serving_size_unit}`;
+                // Store RACC grams in row for calculations
+                row.dataset.raccGrams = data.serving_size_grams;
+                
+                // Auto-fill unit with RACC unit
+                if (!unitInput.value || unitInput.value === 'Unit') {
+                    unitInput.value = data.serving_size_unit;
+                }
+                
+                // Auto-fill quantity with 1.0 if empty
+                if (!quantityInput.value) {
+                    quantityInput.value = '1.0';
+                }
+                
+                // Auto-fill grams based on quantity
+                const quantity = parseFloat(quantityInput.value || 1.0);
+                const totalGrams = quantity * data.serving_size_grams;
+                
+                if (!gramsInput.value || gramsInput.value === '100') {
+                    gramsInput.value = totalGrams.toFixed(1);
+                }
+                
+                // Update placeholders and tooltips for clarity
+                quantityInput.placeholder = '1.0';
+                unitInput.placeholder = data.serving_size_unit;
+                unitInput.title = `USDA serving: ${data.serving_size_description || data.serving_size_unit}`;
+                gramsInput.placeholder = data.serving_size_grams;
+                gramsInput.title = `RACC: ${data.serving_size_grams}g per ${data.serving_size_unit}`;
             } else {
-                unitInput.placeholder = 'Unit (g, ml, cups)';
+                // No RACC data available
+                row.dataset.raccGrams = '';
+                unitInput.placeholder = 'g, ml, cup, etc.';
                 unitInput.title = '';
+                gramsInput.placeholder = '100';
+                gramsInput.title = 'Total grams for this ingredient';
             }
         })
         .catch(err => {
             console.log('Could not fetch serving info:', err);
-            unitInput.placeholder = 'Unit (g, ml, cups)';
+            row.dataset.raccGrams = '';
+            unitInput.placeholder = 'g, ml, cup, etc.';
+            gramsInput.placeholder = '100';
         });
 }
 </script>

@@ -100,8 +100,14 @@
                     {% for scan in recent_scans %}
                     <tr>
                         <td>{{ scan.user.email }}</td>
-                        <td>{{ scan.detected_ingredients|length }}</td>
-                        <td>{{ scan.scan_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            {% if scan.detected_ingredients %}
+                                {{ scan.detected_ingredients|length }}
+                            {% else %}
+                                0
+                            {% endif %}
+                        </td>
+                        <td>{{ scan.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                     </tr>
                     {% else %}
                     <tr>

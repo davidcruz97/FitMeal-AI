@@ -80,25 +80,75 @@ def logout():
 def dashboard():
     """Admin dashboard with statistics"""
     logger = current_app.logger
+    from datetime import datetime, timedelta
+    from sqlalchemy import func
     
-    # Get statistics
+    # Date ranges for filtering
+    today = datetime.utcnow().date()
+    week_ago = datetime.utcnow() - timedelta(days=7)
+    month_ago = datetime.utcnow() - timedelta(days=30)
+    
+    # Basic counts
     total_recipes = Recipe.query.count()
     published_recipes = Recipe.query.filter_by(is_published=True).count()
     total_ingredients = Ingredient.query.count()
-    verified_ingredients = Ingredient.query.count()
-    total_users = User.query.filter_by(user_type='user').count()
+    total_users = User.query.filter_by(is_deleted=False).count()
     
-    # Recent recipes
-    recent_recipes = Recipe.query.order_by(
+    # Scan statistics (using created_at, not scan_date)
+    from app.models.meal_scan import MealScan
+    total_scans = MealScan.query.count()
+    scans_today = MealScan.query.filter(
+        func.date(MealScan.created_at) == today
+    ).count()
+    scans_week = MealScan.query.filter(
+        MealScan.created_at >= week_ago
+    ).count()
+    scans_month = MealScan.query.filter(
+        MealScan.created_at >= month_ago
+    ).count()
+    
+    # User statistics
+    users_today = User.query.filter(
+        func.date(User.created_at) == today,
+        User.is_deleted == False
+    ).count()
+    users_week = User.query.filter(
+        User.created_at >= week_ago,
+        User.is_deleted == False
+    ).count()
+    active_users = User.query.filter(
+        User.is_active == True,
+        User.is_deleted == False
+    ).count()
+    
+    # Recipe-Ingredient links count
+    total_recipe_ingredients = RecipeIngredient.query.count()
+    
+    # Recent users
+    recent_users = User.query.filter_by(
+        is_deleted=False
+    ).order_by(
+        User.created_at.desc()
+    ).limit(5).all()
+    
+    # Recent scans (using created_at for ordering)
+    recent_scans = MealScan.query.order_by(
+        MealScan.created_at.desc()
+    ).limit(5).all()
+    
+    # Popular recipes (recipes with most matches/uses)
+    # For now, just get published recipes
+    popular_recipes = Recipe.query.filter_by(
+        is_published=True
+    ).order_by(
         Recipe.created_at.desc()
     ).limit(5).all()
     
-    # Popular recipes
-    popular_recipes = Recipe.query.filter_by(is_published=True).order_by(
-        Recipe.created_at.desc()
-    ).limit(5).all()
-    
-    logger.info(f"📊 Admin dashboard accessed | Recipes: {total_recipes} | Ingredients: {total_ingredients}")
+    logger.info(
+        f"📊 Admin dashboard accessed | "
+        f"Users: {total_users} | Recipes: {total_recipes} | "
+        f"Ingredients: {total_ingredients} | Scans: {total_scans}"
+    )
     
     # Create stats dictionary for the template
     stats = {
@@ -106,12 +156,24 @@ def dashboard():
         'total_recipes': total_recipes,
         'published_recipes': published_recipes,
         'total_ingredients': total_ingredients,
-        'verified_ingredients': verified_ingredients
+        'total_scans': total_scans,
+        'total_recipe_ingredients': total_recipe_ingredients,
+        
+        # Activity stats
+        'scans_today': scans_today,
+        'scans_week': scans_week,
+        'scans_month': scans_month,
+        
+        # User stats
+        'users_today': users_today,
+        'users_week': users_week,
+        'active_users': active_users,
     }
     
     return render_template('admin/dashboard.html',
                          stats=stats,
-                         recent_recipes=recent_recipes,
+                         recent_users=recent_users,
+                         recent_scans=recent_scans,
                          popular_recipes=popular_recipes)
 
 # ==================== USER MANAGEMENT ====================
@@ -130,6 +192,124 @@ def users():
     return render_template('admin/users.html',
                          users=pagination.items,
                          pagination=pagination)
+    
+@bp.route('/users/create', methods=['POST'])
+@admin_required
+def user_create():
+    """Create new user"""
+    logger = current_app.logger
+    from flask import session
+    
+    try:
+        email = request.form.get('email', '').strip().lower()
+        full_name = request.form.get('full_name', '').strip()
+        password = request.form.get('password', '')
+        user_type = request.form.get('user_type', 'user')
+        
+        # Validation
+        if not email or not password or not full_name:
+            flash('Email, name, and password are required', 'error')
+            return redirect(url_for('admin.users'))
+        
+        # Check if user already exists
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            flash(f'User with email {email} already exists', 'error')
+            return redirect(url_for('admin.users'))
+        
+        # Validate user_type
+        if user_type not in ['user', 'nutritionist', 'admin']:
+            user_type = 'user'
+        
+        # Create user
+        user = User(
+            email=email,
+            full_name=full_name,
+            user_type=user_type,
+            is_active=True,
+            is_verified=True,
+            email_verified_at=datetime.utcnow()
+        )
+        user.set_password(password)
+        
+        db.session.add(user)
+        db.session.commit()
+        
+        logger.info(f"✅ User created: {email} ({user_type}) by admin {session['user_email']}")
+        flash(f'User "{full_name}" created successfully!', 'success')
+        
+        return redirect(url_for('admin.users'))
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"❌ Failed to create user: {e}", exc_info=True)
+        flash(f'Error creating user: {str(e)}', 'error')
+        return redirect(url_for('admin.users'))
+
+
+@bp.route('/users/<int:user_id>/toggle-role', methods=['POST'])
+@admin_required
+def user_toggle_role(user_id):
+    """Toggle user's nutritionist role"""
+    logger = current_app.logger
+    
+    try:
+        user = User.query.get_or_404(user_id)
+        
+        if user.is_admin:
+            flash('Cannot modify admin users', 'error')
+            return redirect(url_for('admin.users'))
+        
+        # Toggle nutritionist role
+        if user.user_type == 'nutritionist':
+            user.user_type = 'user'
+            flash(f'{user.full_name} is now a regular user', 'info')
+        else:
+            user.user_type = 'nutritionist'
+            flash(f'{user.full_name} is now a nutritionist', 'success')
+        
+        db.session.commit()
+        
+        logger.info(f"✅ User role toggled: {user.email} -> {user.user_type}")
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"❌ Failed to toggle user role: {e}", exc_info=True)
+        flash(f'Error: {str(e)}', 'error')
+    
+    return redirect(url_for('admin.users'))
+
+
+@bp.route('/users/<int:user_id>/delete', methods=['POST'])
+@admin_required
+def user_delete(user_id):
+    """Soft delete user"""
+    logger = current_app.logger
+    from flask import session
+    
+    try:
+        user = User.query.get_or_404(user_id)
+        
+        if user.is_admin:
+            flash('Cannot delete admin users', 'error')
+            return redirect(url_for('admin.users'))
+        
+        # Soft delete
+        user.is_deleted = True
+        user.deleted_at = datetime.utcnow()
+        user.is_active = False
+        
+        db.session.commit()
+        
+        logger.info(f"🗑️ User soft deleted: {user.email} by admin {session['user_email']}")
+        flash(f'User "{user.full_name}" deleted successfully', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"❌ Failed to delete user: {e}", exc_info=True)
+        flash(f'Error: {str(e)}', 'error')
+    
+    return redirect(url_for('admin.users'))
 
 # ==================== RECIPE MANAGEMENT ====================
 
@@ -470,10 +650,18 @@ def ingredients():
     category = request.args.get('category', '')
     search = request.args.get('search', '')
     
-    query = Ingredient.query
+    # Build query with recipe count
+    from sqlalchemy import func
+    
+    query = db.session.query(
+        Ingredient,
+        func.count(RecipeIngredient.recipe_id.distinct()).label('recipe_count')
+    ).outerjoin(
+        RecipeIngredient, Ingredient.id == RecipeIngredient.ingredient_id
+    ).group_by(Ingredient.id)
     
     if category:
-        query = query.filter_by(category=category)
+        query = query.filter(Ingredient.category == category)
     
     if search:
         query = query.filter(
@@ -484,8 +672,14 @@ def ingredients():
     
     pagination = query.paginate(page=page, per_page=50, error_out=False)
     
+    # Add recipe_count to each ingredient object
+    ingredients_with_count = []
+    for ingredient, recipe_count in pagination.items:
+        ingredient.recipe_count = recipe_count
+        ingredients_with_count.append(ingredient)
+    
     return render_template('admin/ingredients.html',
-                     ingredients=pagination.items,
+                     ingredients=ingredients_with_count,
                      pagination=pagination,
                      category=category,
                      search=search,
@@ -671,7 +865,6 @@ def usda_search():
                            results=results,
                            error=error)
 
-
 @bp.route('/usda/import/<int:fdc_id>', methods=['POST'])
 @admin_required
 def usda_import(fdc_id):
@@ -681,9 +874,6 @@ def usda_import(fdc_id):
     import requests
     
     try:
-        # Get current user ID from session
-        current_user_id = session.get('user_id')
-        
         # Get ingredient data from USDA
         ingredient_data = usda_api.import_to_ingredient(fdc_id)
         
@@ -691,7 +881,7 @@ def usda_import(fdc_id):
             flash('Failed to import ingredient from USDA', 'error')
             return redirect(url_for('admin.usda_search'))
         
-        # Check if ingredient already exists (including soft-deleted ones)
+        # Check if ingredient already exists by USDA ID or name
         existing = Ingredient.query.filter(
             db.or_(
                 Ingredient.name == ingredient_data['name'],
@@ -700,12 +890,7 @@ def usda_import(fdc_id):
         ).first()
         
         if existing:
-            # Restore if soft-deleted
-            if existing.deleted_at:
-                existing.deleted_at = None
-                logger.info(f"♻️ Restored soft-deleted ingredient: {existing.name}")
-            
-            # Update with new USDA data
+            # Update existing ingredient with new USDA data
             existing.category = ingredient_data['category']
             existing.calories_per_100g = ingredient_data['calories_per_100g']
             existing.protein_per_100g = ingredient_data['protein_per_100g']
@@ -719,8 +904,6 @@ def usda_import(fdc_id):
             existing.serving_size_unit = ingredient_data.get('serving_size_unit')
             existing.serving_size_description = ingredient_data.get('serving_size_description')
             existing.usda_fdc_id = fdc_id
-            existing.is_verified = True
-            existing.verified_by_id = current_user_id
             
             db.session.commit()
             
@@ -743,8 +926,7 @@ def usda_import(fdc_id):
                 serving_size_grams=ingredient_data.get('serving_size_grams'),
                 serving_size_unit=ingredient_data.get('serving_size_unit'),
                 serving_size_description=ingredient_data.get('serving_size_description'),
-                usda_fdc_id=fdc_id,
-                verified_by_id=current_user_id
+                usda_fdc_id=fdc_id
             )
             
             db.session.add(ingredient)

@@ -1,3 +1,4 @@
+<!-- app/templates/admin/users.html -->
 {% extends "base.html" %}
 
 {% block title %}Users - FitMeal AI Admin{% endblock %}
@@ -10,6 +11,10 @@
             <i class="fas fa-users"></i>
             All Users
         </h3>
+        <button type="button" class="btn btn-primary" onclick="showCreateUserModal()">
+            <i class="fas fa-plus"></i>
+            Add New User
+        </button>
     </div>
 
     <!-- Search Bar -->
@@ -31,8 +36,7 @@
                     <th>Name</th>
                     <th>Email</th>
                     <th>Role</th>
-                    <th>Scans</th>
-                    <th>Meals Logged</th>
+                    <th>Status</th>
                     <th>Joined</th>
                     <th>Last Active</th>
                     <th>Actions</th>
@@ -44,36 +48,40 @@
                     <td><strong>{{ user.full_name or 'N/A' }}</strong></td>
                     <td>{{ user.email }}</td>
                     <td>
-                        {% if user.is_admin %}
+                        {% if user.user_type == 'admin' %}
                         <span class="badge badge-danger">Admin</span>
-                        {% elif user.is_nutritionist %}
+                        {% elif user.user_type == 'nutritionist' %}
                         <span class="badge" style="background-color: #ff9800; color: white;">Nutritionist</span>
                         {% else %}
                         <span class="badge badge-primary">User</span>
                         {% endif %}
                     </td>
-                    <td>{{ user.scans|length }}</td>
-                    <td>{{ user.meal_logs|length }}</td>
+                    <td>
+                        {% if user.is_active %}
+                        <span class="badge badge-success">Active</span>
+                        {% else %}
+                        <span class="badge" style="background-color: #999;">Inactive</span>
+                        {% endif %}
+                    </td>
                     <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
                     <td>
-                        {% if user.last_login %}
-                        {{ user.last_login.strftime('%Y-%m-%d %H:%M') }}
+                        {% if user.last_login_at %}
+                        {{ user.last_login_at.strftime('%Y-%m-%d %H:%M') }}
                         {% else %}
                         Never
                         {% endif %}
                     </td>
                     <td>
                         <div class="action-buttons">
-                            <button type="button" class="btn btn-sm btn-info btn-icon" onclick="viewUser({{ user.id }})" title="View Details">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            {% if not user.is_admin %}
+                            {% if user.user_type != 'admin' %}
                             <form action="{{ url_for('admin.user_toggle_role', user_id=user.id) }}" method="POST" style="display: inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn btn-sm btn-secondary btn-icon" title="Toggle Nutritionist Role">
                                     <i class="fas fa-user-tag"></i>
                                 </button>
                             </form>
                             <form action="{{ url_for('admin.user_delete', user_id=user.id) }}" method="POST" style="display: inline;" onsubmit="return confirmDelete('Are you sure you want to delete {{ user.email }}?')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <button type="submit" class="btn btn-sm btn-danger btn-icon" title="Delete User">
                                     <i class="fas fa-trash"></i>
                                 </button>
@@ -84,10 +92,15 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="8">
+                    <td colspan="7">
                         <div class="empty-state">
                             <i class="fas fa-users"></i>
                             <h3>No Users Found</h3>
+                            <p>Start by creating your first user</p>
+                            <button type="button" class="btn btn-primary" onclick="showCreateUserModal()" style="margin-top: 20px;">
+                                <i class="fas fa-plus"></i>
+                                Add User
+                            </button>
                         </div>
                     </td>
                 </tr>
@@ -97,39 +110,78 @@
     </div>
 </div>
 
-<!-- User Details Modal -->
-<div id="userModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 10000; align-items: center; justify-content: center;">
-    <div class="card" style="max-width: 700px; width: 90%; max-height: 90vh; overflow-y: auto;">
+<!-- Create User Modal -->
+<div id="createUserModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 10000; align-items: center; justify-content: center;">
+    <div class="card" style="max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
         <div class="card-header">
             <h3 class="card-title">
-                <i class="fas fa-user"></i>
-                User Details
+                <i class="fas fa-user-plus"></i>
+                Create New User
             </h3>
-            <button type="button" class="btn btn-outline btn-sm" onclick="closeUserModal()">
+            <button type="button" class="btn btn-outline btn-sm" onclick="closeCreateUserModal()">
                 <i class="fas fa-times"></i>
             </button>
         </div>
 
-        <div id="userDetailsContent">
-            <!-- User details will be loaded here via AJAX -->
-        </div>
+        <form method="POST" action="{{ url_for('admin.user_create') }}" id="createUserForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="form-group">
+                <label class="form-label">Full Name *</label>
+                <input type="text" name="full_name" class="form-control" required placeholder="John Doe">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Email Address *</label>
+                <input type="email" name="email" class="form-control" required placeholder="user@example.com">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Password *</label>
+                <input type="password" name="password" class="form-control" required minlength="6" placeholder="Minimum 6 characters">
+                <small class="form-help">Password must be at least 6 characters long</small>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">User Type</label>
+                <select name="user_type" class="form-control">
+                    <option value="user">Regular User</option>
+                    <option value="nutritionist">Nutritionist</option>
+                    <option value="admin">Admin</option>
+                </select>
+                <small class="form-help">
+                    <strong>Regular User:</strong> Can use the app<br>
+                    <strong>Nutritionist:</strong> Can manage recipes and ingredients<br>
+                    <strong>Admin:</strong> Full access to admin panel
+                </small>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button type="button" class="btn btn-outline" onclick="closeCreateUserModal()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Create User
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
 <script>
-function viewUser(userId) {
-    // Placeholder - would fetch user details via AJAX
-    document.getElementById('userModal').style.display = 'flex';
-    document.getElementById('userDetailsContent').innerHTML = '<div style="padding: 20px; text-align: center;"><i class="fas fa-spinner fa-spin fa-3x"></i><p>Loading user details...</p></div>';
+function showCreateUserModal() {
+    document.getElementById('createUserModal').style.display = 'flex';
+    document.getElementById('createUserForm').reset();
 }
 
-function closeUserModal() {
-    document.getElementById('userModal').style.display = 'none';
+function closeCreateUserModal() {
+    document.getElementById('createUserModal').style.display = 'none';
 }
 
-document.getElementById('userModal').addEventListener('click', function(e) {
+// Close modal on background click
+document.getElementById('createUserModal').addEventListener('click', function(e) {
     if (e.target === this) {
-        closeUserModal();
+        closeCreateUserModal();
     }
 });
 </script>

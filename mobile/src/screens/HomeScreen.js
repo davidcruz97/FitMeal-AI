@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { getTodayMeals, getNutritionStats } from '../api/meals';
+import { getMealHistory, getNutritionStats } from '../api/meals';
 import { useAuth } from '../context/AuthContext';
 import Colors from '../constants/colors';
 
@@ -31,9 +31,12 @@ const HomeScreen = () => {
   const loadData = async () => {
     try {
       const [mealsData, statsData] = await Promise.all([
-        getTodayMeals(),
+        getMealHistory(1), // Get today's meals (last 1 day)
         getNutritionStats(1), // Today's stats
       ]);
+
+      console.log('Home - Meals data:', JSON.stringify(mealsData, null, 2));
+      console.log('Home - Stats data:', JSON.stringify(statsData, null, 2));
 
       setTodayMeals(mealsData.meals || []);
       setStats(statsData);
@@ -50,11 +53,13 @@ const HomeScreen = () => {
     loadData();
   };
 
-  const todayStats = stats?.daily_stats?.[0] || {
-    total_calories: 0,
-    total_protein: 0,
-    total_carbs: 0,
-    total_fats: 0,
+  // Extract today's stats from API response
+  const statsData = stats?.stats || {};
+  const todayStats = {
+    total_calories: statsData.total_calories || 0,
+    total_protein: statsData.total_protein || 0,
+    total_carbs: statsData.total_carbs || 0,
+    total_fats: statsData.total_fats || 0,
   };
 
   return (
@@ -65,16 +70,6 @@ const HomeScreen = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.greeting}>Hello, {user?.full_name || 'there'}!</Text>
-        <Text style={styles.date}>{new Date().toLocaleDateString('en-US', {
-          weekday: 'long',
-          month: 'long',
-          day: 'numeric',
-        })}</Text>
-      </View>
-
       {/* Today's Nutrition Summary */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Today's Nutrition</Text>
@@ -158,28 +153,37 @@ const MacroCard = ({ label, value, unit, color }) => (
     <View style={[styles.macroIndicator, { backgroundColor: color }]} />
     <Text style={styles.macroLabel}>{label}</Text>
     <Text style={styles.macroValue}>
-      {value.toFixed(0)} <Text style={styles.macroUnit}>{unit}</Text>
+      {(value || 0).toFixed(0)} <Text style={styles.macroUnit}>{unit}</Text>
     </Text>
   </View>
 );
 
-const MealItem = ({ meal }) => (
-  <View style={styles.mealItem}>
-    <View style={styles.mealInfo}>
-      <Text style={styles.mealType}>{meal.meal_type}</Text>
-      <Text style={styles.mealName}>{meal.recipe_name}</Text>
-      <Text style={styles.mealMacros}>
-        {meal.calories_logged.toFixed(0)} kcal
+const MealItem = ({ meal }) => {
+  console.log('MealItem - meal object:', JSON.stringify(meal, null, 2));
+  
+  const calories = meal.calories_logged || 0;
+  // Try multiple possible field names for recipe name
+  const recipeName = meal.recipe?.name || meal.recipe_name || 'Unknown Recipe';
+  const mealType = meal.meal_type || 'meal';
+
+  return (
+    <View style={styles.mealItem}>
+      <View style={styles.mealInfo}>
+        <Text style={styles.mealType}>{mealType}</Text>
+        <Text style={styles.mealName}>{recipeName}</Text>
+        <Text style={styles.mealMacros}>
+          {calories.toFixed(0)} kcal
+        </Text>
+      </View>
+      <Text style={styles.mealTime}>
+        {new Date(meal.consumed_at).toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+        })}
       </Text>
     </View>
-    <Text style={styles.mealTime}>
-      {new Date(meal.consumed_at).toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-      })}
-    </Text>
-  </View>
-);
+  );
+};
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -188,22 +192,8 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+    paddingTop: 16,
     paddingBottom: Platform.OS === 'ios' ? 90 : 70,
-  },
-  header: {
-    padding: 20,
-    backgroundColor: Colors.primary,
-  },
-  greeting: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: Colors.textLight,
-    marginBottom: 4,
-  },
-  date: {
-    fontSize: 16,
-    color: Colors.textLight,
-    opacity: 0.9,
   },
   card: {
     backgroundColor: Colors.surface,

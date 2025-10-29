@@ -1,9 +1,17 @@
+// mobile/src/components/RecipeCard.js
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import Colors from '../constants/colors';
 
 const RecipeCard = ({ recipe, matchScore, onPress }) => {
   const macros = recipe.nutritional_info?.per_serving;
+
+  // Construct full image URL
+  const getImageUrl = (imageUrl) => {
+    if (!imageUrl) return null;
+    if (imageUrl.startsWith('http')) return imageUrl;
+    return `https://fitmeal.cinturillas247.com${imageUrl}`;
+  };
 
   return (
     <TouchableOpacity
@@ -13,7 +21,7 @@ const RecipeCard = ({ recipe, matchScore, onPress }) => {
     >
       {recipe.image_url && (
         <Image
-          source={{ uri: recipe.image_url }}
+          source={{ uri: getImageUrl(recipe.image_url) }}
           style={styles.image}
           resizeMode="cover"
         />

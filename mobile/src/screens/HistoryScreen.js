@@ -47,19 +47,22 @@ const HistoryScreen = () => {
     loadData();
   };
 
-  const averageStats = stats?.average_daily || {
-    calories: 0,
-    protein: 0,
-    carbs: 0,
-    fats: 0,
+  // Backend returns stats under 'stats' object with specific field names
+  const statsData = stats?.stats || {};
+  
+  const averageStats = {
+    calories: statsData.avg_calories_per_day || 0,
+    protein: statsData.avg_protein_per_day || 0,
+    carbs: statsData.avg_carbs_per_day || 0,
+    fats: statsData.avg_fats_per_day || 0,
   };
 
-  const totalStats = stats?.total || {
-    calories: 0,
-    protein: 0,
-    carbs: 0,
-    fats: 0,
-    meal_count: 0,
+  const totalStats = {
+    calories: statsData.total_calories || 0,
+    protein: statsData.total_protein || 0,
+    carbs: statsData.total_carbs || 0,
+    fats: statsData.total_fats || 0,
+    meal_count: statsData.total_meals || 0,
   };
 
   // Group meals by date
@@ -109,25 +112,25 @@ const HistoryScreen = () => {
         <View style={styles.statsRow}>
           <StatItem
             label="Calories"
-            value={averageStats.calories}
+            value={averageStats.calories || 0}
             unit="kcal"
             color={Colors.calories}
           />
           <StatItem
             label="Protein"
-            value={averageStats.protein}
+            value={averageStats.protein || 0}
             unit="g"
             color={Colors.protein}
           />
           <StatItem
             label="Carbs"
-            value={averageStats.carbs}
+            value={averageStats.carbs || 0}
             unit="g"
             color={Colors.carbs}
           />
           <StatItem
             label="Fats"
-            value={averageStats.fats}
+            value={averageStats.fats || 0}
             unit="g"
             color={Colors.fats}
           />
@@ -140,11 +143,15 @@ const HistoryScreen = () => {
         <View style={styles.totalStats}>
           <View style={styles.totalItem}>
             <FontAwesome5 name="utensils" size={14} color={Colors.text} />
-            <Text style={styles.totalItemText}>{totalStats.meal_count} meals logged</Text>
+            <Text style={styles.totalItemText}>
+              {totalStats.meal_count || 0} meals logged
+            </Text>
           </View>
           <View style={styles.totalItem}>
             <FontAwesome5 name="fire" size={14} color={Colors.text} />
-            <Text style={styles.totalItemText}>{totalStats.calories.toFixed(0)} total calories</Text>
+            <Text style={styles.totalItemText}>
+              {(totalStats.calories || 0).toFixed(0)} total calories
+            </Text>
           </View>
         </View>
       </View>
@@ -179,30 +186,39 @@ const StatItem = ({ label, value, unit, color }) => (
     <View style={[styles.statIndicator, { backgroundColor: color }]} />
     <Text style={styles.statLabel}>{label}</Text>
     <Text style={styles.statValue}>
-      {value.toFixed(0)}
+      {(value || 0).toFixed(0)}
       <Text style={styles.statUnit}> {unit}</Text>
     </Text>
   </View>
 );
 
-const MealHistoryItem = ({ meal }) => (
-  <View style={styles.historyItem}>
-    <View style={styles.historyInfo}>
-      <Text style={styles.historyType}>{meal.meal_type}</Text>
-      <Text style={styles.historyName}>{meal.recipe_name}</Text>
-      <Text style={styles.historyMacros}>
-        {meal.calories_logged.toFixed(0)} kcal
-        {meal.servings && meal.servings > 1 && ` • ${meal.servings} servings`}
+const MealHistoryItem = ({ meal }) => {
+  // Safely get values with defaults
+  const calories = meal.calories_logged || 0;
+  const servings = meal.servings_consumed || meal.servings || 1;
+  // Try multiple possible field names for recipe name
+  const recipeName = meal.recipe?.name || meal.recipe_name || 'Unknown Recipe';
+  const mealType = meal.meal_type || 'meal';
+
+  return (
+    <View style={styles.historyItem}>
+      <View style={styles.historyInfo}>
+        <Text style={styles.historyType}>{mealType}</Text>
+        <Text style={styles.historyName}>{recipeName}</Text>
+        <Text style={styles.historyMacros}>
+          {calories.toFixed(0)} kcal
+          {servings > 1 && ` • ${servings} servings`}
+        </Text>
+      </View>
+      <Text style={styles.historyTime}>
+        {new Date(meal.consumed_at).toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+        })}
       </Text>
     </View>
-    <Text style={styles.historyTime}>
-      {new Date(meal.consumed_at).toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-      })}
-    </Text>
-  </View>
-);
+  );
+};
 
 const styles = StyleSheet.create({
   safeArea: {

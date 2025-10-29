@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+// mobile/src/screens/RecipeDetailScreen.js
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   Image,
   Platform,
 } from 'react-native';
@@ -18,18 +18,16 @@ import Colors from '../constants/colors';
 const RecipeDetailScreen = ({ route }) => {
   const navigation = useNavigation();
   const { recipe } = route.params;
-  const [servings, setServings] = useState(1);
+
+  // Construct full image URL
+  const getImageUrl = (imageUrl) => {
+    if (!imageUrl) return null;
+    if (imageUrl.startsWith('http')) return imageUrl;
+    return `https://fitmeal.cinturillas247.com${imageUrl}`;
+  };
 
   const handleLogMeal = () => {
-    navigation.navigate('LogMeal', { recipe, servings });
-  };
-
-  const increaseServings = () => {
-    setServings(prev => Math.min(prev + 1, 10));
-  };
-
-  const decreaseServings = () => {
-    setServings(prev => Math.max(prev - 1, 1));
+    navigation.navigate('LogMeal', { recipe, servings: 1 });
   };
 
   return (
@@ -37,7 +35,7 @@ const RecipeDetailScreen = ({ route }) => {
       <ScrollView style={styles.content}>
         {recipe.image_url && (
           <Image
-            source={{ uri: recipe.image_url }}
+            source={{ uri: getImageUrl(recipe.image_url) }}
             style={styles.image}
             resizeMode="cover"
           />
@@ -63,34 +61,12 @@ const RecipeDetailScreen = ({ route }) => {
           </View>
         </View>
 
-        {/* Servings Selector */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Servings</Text>
-          <View style={styles.servingsControl}>
-            <TouchableOpacity
-              style={styles.servingsButton}
-              onPress={decreaseServings}
-              disabled={servings <= 1}
-            >
-              <Text style={styles.servingsButtonText}>-</Text>
-            </TouchableOpacity>
-            <Text style={styles.servingsValue}>{servings}</Text>
-            <TouchableOpacity
-              style={styles.servingsButton}
-              onPress={increaseServings}
-              disabled={servings >= 10}
-            >
-              <Text style={styles.servingsButtonText}>+</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
         {/* Nutritional Information */}
         {recipe.nutritional_info && (
           <View style={styles.section}>
             <MacroDisplay
               nutritionalInfo={recipe.nutritional_info}
-              servings={servings}
+              servings={1}
               showTitle={true}
             />
           </View>
@@ -133,7 +109,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-    paddingBottom: Platform.OS === 'ios' ? 90 : 70,
   },
   content: {
     flex: 1,
@@ -174,33 +149,6 @@ const styles = StyleSheet.create({
     color: Colors.text,
     marginBottom: 16,
   },
-  servingsControl: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 12,
-  },
-  servingsButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  servingsButtonText: {
-    fontSize: 24,
-    color: Colors.textLight,
-    fontWeight: 'bold',
-  },
-  servingsValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: Colors.text,
-    marginHorizontal: 40,
-  },
   ingredientItem: {
     flexDirection: 'row',
     marginBottom: 8,
@@ -222,11 +170,10 @@ const styles = StyleSheet.create({
   },
   footer: {
     padding: 20,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 16, 
+    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
     backgroundColor: Colors.surface,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
-    // Shadow for better separation
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,

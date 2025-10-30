@@ -88,15 +88,16 @@ const LogMealScreen = ({ route }) => {
             return {
               ingredient_id: ingredientId,
               name: ing.name || ingredientData.name,
-              quantity: parseFloat(ing.quantity) || 100,
-              unit: ing.unit || 'g',
+              quantity: parseFloat(ing.quantity) || 1,  // Display quantity
+              unit: ing.unit || 'g',  // Display unit
+              quantity_grams: parseFloat(ing.quantity_grams) || 100,  // For calculations
               enabled: true,
-              currentQuantity: parseFloat(ing.quantity) || 100,
+              currentQuantity: parseFloat(ing.quantity_grams) || 100,  // Use grams for calculation
               // Nutritional data per 100g
-              calories_per_100g: ingredientData.calories_per_100g || 0,
-              protein_per_100g: ingredientData.protein_per_100g || 0,
-              carbs_per_100g: ingredientData.carbs_per_100g || 0,
-              fats_per_100g: ingredientData.fats_per_100g || 0,
+              calories_per_100g: ingredientData.nutritional_info?.calories_per_100g || 0,
+              protein_per_100g: ingredientData.nutritional_info?.protein_per_100g || 0,
+              carbs_per_100g: ingredientData.nutritional_info?.carbs_per_100g || 0,
+              fats_per_100g: ingredientData.nutritional_info?.fats_per_100g || 0,
             };
           } catch (error) {
             console.error(`Error loading ingredient:`, error);
@@ -171,9 +172,18 @@ const LogMealScreen = ({ route }) => {
   };
 
   const updateQuantity = (index, value) => {
+    const newDisplayQuantity = parseFloat(value) || 0;
     const updatedIngredients = [...ingredients];
-    const numValue = parseFloat(value) || 0;
-    updatedIngredients[index].currentQuantity = numValue;
+    const ingredient = updatedIngredients[index];
+    
+    // Update display quantity
+    ingredient.quantity = newDisplayQuantity;
+    
+    // Calculate new quantity_grams based on proportion
+    const originalQuantity = parseFloat(recipe.ingredients[index].quantity);
+    const originalGrams = parseFloat(recipe.ingredients[index].quantity_grams);
+    ingredient.currentQuantity = (newDisplayQuantity / originalQuantity) * originalGrams;
+    
     setIngredients(updatedIngredients);
   };
 
@@ -295,7 +305,7 @@ const LogMealScreen = ({ route }) => {
                   <View style={styles.quantityControl}>
                     <TextInput
                       style={styles.quantityInput}
-                      value={ingredient.currentQuantity.toString()}
+                      value={ingredient.quantity.toString()}
                       onChangeText={(value) => updateQuantity(index, value)}
                       keyboardType="numeric"
                       selectTextOnFocus

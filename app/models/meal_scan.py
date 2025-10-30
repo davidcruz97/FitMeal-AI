@@ -53,6 +53,10 @@ class RecipeIngredient(db.Model):
         onupdate=datetime.utcnow
     )
     
+    # Relationships
+    ingredient = db.relationship('Ingredient', foreign_keys=[ingredient_id])
+    recipe = db.relationship('Recipe', foreign_keys=[recipe_id])
+    
     def __repr__(self):
         return f'<RecipeIngredient recipe_id={self.recipe_id} ingredient_id={self.ingredient_id}>'
     

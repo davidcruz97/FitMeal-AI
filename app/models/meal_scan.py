@@ -234,6 +234,17 @@ class MealLog(db.Model):
     
     def to_dict(self):
         """Convert to dictionary for API responses"""
+        # Format consumed_at as UTC ISO string with Z suffix
+        consumed_at_utc = None
+        if self.consumed_at:
+            # Ensure datetime is aware (has timezone info)
+            if self.consumed_at.tzinfo is None:
+                # It's a naive datetime, assume it's UTC
+                consumed_at_utc = self.consumed_at.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+            else:
+                # It has timezone info, convert to UTC
+                consumed_at_utc = self.consumed_at.astimezone(None).isoformat()
+        
         return {
             'id': self.id,
             'recipe': self.recipe.to_dict(include_ingredients=False, include_macros=False) if self.recipe else None,
@@ -246,7 +257,7 @@ class MealLog(db.Model):
                 'fats': self.fats_logged
             },
             'notes': self.notes,
-            'consumed_at': self.consumed_at.isoformat() if self.consumed_at else None,
+            'consumed_at': consumed_at_utc,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
     

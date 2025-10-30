@@ -74,6 +74,18 @@ def log_meal():
             f"F: {macros['total']['fats']:.1f}g"
         )
         
+        # Get consumed_at from request or use current time
+        consumed_at_str = data.get('consumed_at')
+        if consumed_at_str:
+            try:
+                # Parse ISO format datetime from mobile app
+                consumed_at = datetime.fromisoformat(consumed_at_str.replace('Z', '+00:00'))
+            except Exception as e:
+                logger.warning(f"⚠️ Invalid consumed_at format, using current time: {e}")
+                consumed_at = datetime.utcnow()
+        else:
+            consumed_at = datetime.utcnow()
+        
         # Create meal log
         meal_log = MealLog(
             user_id=user_id,
@@ -86,7 +98,7 @@ def log_meal():
             carbs_logged=macros['total']['carbs'],
             fats_logged=macros['total']['fats'],
             notes=notes,
-            consumed_at=datetime.utcnow()
+            consumed_at=consumed_at
         )
         
         db.session.add(meal_log)
@@ -221,7 +233,11 @@ def get_nutrition_stats():
         total_protein = sum(meal.protein_logged for meal in meals)
         total_carbs = sum(meal.carbs_logged for meal in meals)
         total_fats = sum(meal.fats_logged for meal in meals)
-        
+
+        # Calculate the actual number of unique days with meals
+        unique_days = len(set(meal.consumed_at.date() for meal in meals))
+        days_with_meals = max(unique_days, 1)  # Avoid division by zero
+
         # Calculate daily breakdown
         daily_breakdown = {}
         for meal in meals:
@@ -235,7 +251,7 @@ def get_nutrition_stats():
                     'fats': 0,
                     'meals': []
                 }
-            
+
             daily_breakdown[date_key]['calories'] += meal.calories_logged
             daily_breakdown[date_key]['protein'] += meal.protein_logged
             daily_breakdown[date_key]['carbs'] += meal.carbs_logged
@@ -245,18 +261,19 @@ def get_nutrition_stats():
                 'recipe_name': meal.recipe.name if meal.recipe else None,
                 'calories': meal.calories_logged
             })
-        
+
         # Calculate meal type distribution
         meal_type_counts = {}
         for meal in meals:
             meal_type_counts[meal.meal_type] = meal_type_counts.get(meal.meal_type, 0) + 1
-        
+
         logger.info(
-            f"✅ Calculated nutrition stats: {len(meals)} meals | "
-            f"Avg {total_calories/days:.0f} kcal/day | "
-            f"P: {total_protein/days:.0f}g C: {total_carbs/days:.0f}g F: {total_fats/days:.0f}g [User: {user_id}]"
+            f"✅ Calculated nutrition stats: {len(meals)} meals over {days_with_meals} days | "
+            f"Avg {total_calories/days_with_meals:.0f} kcal/day | "
+            f"P: {total_protein/days_with_meals:.0f}g C: {total_carbs/days_with_meals:.0f}g "
+            f"F: {total_fats/days_with_meals:.0f}g [User: {user_id}]"
         )
-        
+
         return jsonify({
             'stats': {
                 'total_meals': len(meals),
@@ -264,11 +281,12 @@ def get_nutrition_stats():
                 'total_protein': round(total_protein, 1),
                 'total_carbs': round(total_carbs, 1),
                 'total_fats': round(total_fats, 1),
-                'avg_calories_per_day': round(total_calories / days, 1),
-                'avg_protein_per_day': round(total_protein / days, 1),
-                'avg_carbs_per_day': round(total_carbs / days, 1),
-                'avg_fats_per_day': round(total_fats / days, 1),
-                'meal_type_distribution': meal_type_counts
+                'avg_calories_per_day': round(total_calories / days_with_meals, 1),
+                'avg_protein_per_day': round(total_protein / days_with_meals, 1),
+                'avg_carbs_per_day': round(total_carbs / days_with_meals, 1),
+                'avg_fats_per_day': round(total_fats / days_with_meals, 1),
+                'meal_type_distribution': meal_type_counts,
+                'days_with_meals': days_with_meals 
             },
             'daily_breakdown': sorted(daily_breakdown.values(), key=lambda x: x['date'], reverse=True),
             'days': days,

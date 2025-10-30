@@ -1,21 +1,12 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import Colors from '../constants/colors';
 
-const SplashScreen = ({ navigation }) => {
-  useEffect(() => {
-    // Simulate splash screen delay
-    const timer = setTimeout(() => {
-      // Navigation will be handled by App.js based on auth status
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
+const SplashScreen = () => {
   return (
     <View style={styles.container}>
-      <FontAwesome5 name="apple-alt" size={80} color={Colors.textLight} style={styles.logo} />
+      <FontAwesome5 name="utensils" size={80} color={Colors.textLight} style={styles.logo} />
       <Text style={styles.title}>FitMeal AI</Text>
       <Text style={styles.subtitle}>
         AI-Powered Meal Planning

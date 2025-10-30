@@ -4,6 +4,9 @@ import { saveToken, getToken, saveUser, getUser, clearStorage } from '../utils/s
 
 const AuthContext = createContext({});
 
+// Minimum splash screen display time (milliseconds)
+const MINIMUM_SPLASH_TIME = 1500; // 1.5 seconds
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -15,6 +18,8 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const checkAuthStatus = async () => {
+    const startTime = Date.now();
+    
     try {
       const token = await getToken();
       const userData = await getUser();
@@ -26,7 +31,13 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Error checking auth status:', error);
     } finally {
-      setIsLoading(false);
+      // Ensure splash screen shows for minimum time
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = Math.max(0, MINIMUM_SPLASH_TIME - elapsedTime);
+      
+      setTimeout(() => {
+        setIsLoading(false);
+      }, remainingTime);
     }
   };
 

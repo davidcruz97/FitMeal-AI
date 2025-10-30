@@ -1,5 +1,5 @@
 // mobile/src/screens/HistoryScreen.js
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { getMealHistory, getNutritionStats, deleteMealLog } from '../api/meals';
+import LoadingSpinner from '../components/LoadingSpinner';
 import Colors from '../constants/colors';
 
 const HistoryScreen = () => {
@@ -22,9 +24,12 @@ const HistoryScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, [days]);
+  // Auto-refresh when screen is focused OR when days changes
+  useFocusEffect(
+    React.useCallback(() => {
+      loadData();
+    }, [days])
+  );
 
   const loadData = async () => {
     try {
@@ -60,7 +65,7 @@ const HistoryScreen = () => {
           onPress: async () => {
             try {
               await deleteMealLog(mealId);
-              loadData();
+              loadData(); // Reload data after deletion
             } catch (error) {
               console.error('Error deleting meal:', error);
               Alert.alert('Error', 'Failed to delete meal');
@@ -70,6 +75,11 @@ const HistoryScreen = () => {
       ]
     );
   };
+
+  // Show loading spinner on initial load
+  if (loading) {
+    return <LoadingSpinner message="Loading meal history..." />;
+  }
 
   const statsData = stats?.stats || {};
   

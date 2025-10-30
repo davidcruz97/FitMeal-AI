@@ -1,5 +1,5 @@
 // mobile/src/screens/HomeScreen.js
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { getMealHistory, getNutritionStats } from '../api/meals';
 import { useAuth } from '../context/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
+import LoadingSpinner from '../components/LoadingSpinner';
 import Colors from '../constants/colors';
 
 const HomeScreen = () => {
@@ -55,6 +56,11 @@ const HomeScreen = () => {
     setRefreshing(true);
     loadData();
   };
+
+  // Show loading spinner on initial load
+  if (loading) {
+    return <LoadingSpinner message="Loading your dashboard..." />;
+  }
 
   // Extract today's stats from API response
   const statsData = stats?.stats || {};

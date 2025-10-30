@@ -34,16 +34,6 @@ const ProfileScreen = () => {
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {user?.full_name?.charAt(0).toUpperCase() || 'U'}
-          </Text>
-        </View>
-        <Text style={styles.name}>{user?.full_name || 'User'}</Text>
-        <Text style={styles.email}>{user?.email || ''}</Text>
-      </View>
-
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Account</Text>
 

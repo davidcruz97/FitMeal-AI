@@ -58,7 +58,7 @@ def log_meal():
         
         # Check if recipe exists
         recipe = Recipe.query.get(recipe_id)
-        if not recipe or recipe.is_deleted:
+        if not recipe:
             logger.warning(
                 f"❌ Meal log failed: Recipe {recipe_id} not found [User: {user_id}]"
             )
@@ -293,7 +293,7 @@ def get_meal(meal_id):
     try:
         meal = MealLog.query.get(meal_id)
         
-        if not meal or meal.is_deleted:
+        if not meal:
             logger.warning(f"⚠️  Meal not found: {meal_id} [User: {user_id}]")
             return jsonify({'error': 'Meal not found'}), 404
         
@@ -326,7 +326,7 @@ def delete_meal(meal_id):
     try:
         meal = MealLog.query.get(meal_id)
         
-        if not meal or meal.is_deleted:
+        if not meal:
             logger.warning(f"⚠️  Meal not found: {meal_id} [User: {user_id}]")
             return jsonify({'error': 'Meal not found'}), 404
         

@@ -1,9 +1,36 @@
-import React from 'react';
+// mobile/src/screens/SplashScreen.js
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import Colors from '../constants/colors';
 
 const SplashScreen = () => {
+  const [loadingStep, setLoadingStep] = useState(0);
+
+  useEffect(() => {
+    // Progress through loading messages
+    const timer1 = setTimeout(() => setLoadingStep(1), 600);
+    const timer2 = setTimeout(() => setLoadingStep(2), 1200);
+
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, []);
+
+  const getLoadingMessage = () => {
+    switch (loadingStep) {
+      case 0:
+        return 'Welcome back...';
+      case 1:
+        return 'Loading your data...';
+      case 2:
+        return 'Almost ready...';
+      default:
+        return 'Loading...';
+    }
+  };
+
   return (
     <View style={styles.container}>
       <FontAwesome5 name="utensils" size={80} color={Colors.textLight} style={styles.logo} />
@@ -16,6 +43,7 @@ const SplashScreen = () => {
         color={Colors.textLight}
         style={styles.loader}
       />
+      <Text style={styles.loadingText}>{getLoadingMessage()}</Text>
     </View>
   );
 };
@@ -43,6 +71,12 @@ const styles = StyleSheet.create({
   },
   loader: {
     marginTop: 40,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 14,
+    color: Colors.textLight,
+    opacity: 0.8,
   },
 });
 

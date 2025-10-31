@@ -1,5 +1,5 @@
 // mobile/src/screens/HomeScreen.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,16 +20,37 @@ import Colors from '../constants/colors';
 
 const HomeScreen = () => {
   const navigation = useNavigation();
-  const { user } = useAuth();
+  const { user, initialData, clearInitialData } = useAuth();
   const [todayMeals, setTodayMeals] = useState([]);
   const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Start as false, check initialData first
   const [refreshing, setRefreshing] = useState(false);
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
 
-  useFocusEffect( 
-    React.useCallback(() => {
+  // On first mount, check if we have preloaded data
+  useEffect(() => {
+    if (isFirstLoad && initialData) {
+      console.log('Using preloaded dashboard data');
+      setTodayMeals(initialData.todayMeals || []);
+      setStats(initialData.todayStats);
+      setIsFirstLoad(false);
+      clearInitialData(); // Clear so subsequent visits load fresh
+    } else if (isFirstLoad) {
+      // No preloaded data, load it now
+      console.log('No preloaded data, loading now...');
+      setLoading(true);
       loadData();
-    }, [])
+      setIsFirstLoad(false);
+    }
+  }, [initialData, isFirstLoad]);
+
+  // Refresh on focus (but not on first load since we handle that above)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!isFirstLoad) {
+        loadData();
+      }
+    }, [isFirstLoad])
   );
 
   const loadData = async () => {
@@ -57,7 +78,7 @@ const HomeScreen = () => {
     loadData();
   };
 
-  // Show loading spinner on initial load
+  // Show loading spinner only if we're actually loading (not using preloaded data)
   if (loading) {
     return <LoadingSpinner message="Loading your dashboard..." />;
   }

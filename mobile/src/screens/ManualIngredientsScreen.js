@@ -9,6 +9,9 @@ import {
   TouchableOpacity,
   Alert,
   Platform,
+  Keyboard,
+  TouchableWithoutFeedback,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -26,6 +29,7 @@ const ManualIngredientsScreen = () => {
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState(null);
+  const [selectedIngredientDetails, setSelectedIngredientDetails] = useState({});
 
   const handleSearch = async (query) => {
     setSearchQuery(query);
@@ -42,7 +46,6 @@ const ManualIngredientsScreen = () => {
       const results = await searchIngredients(query, 20);
       console.log('Search results:', results);
       
-      // Handle both 'ingredients' and 'results' keys for compatibility
       const ingredients = results.ingredients || results.results || [];
       setSearchResults(ingredients);
       
@@ -61,9 +64,32 @@ const ManualIngredientsScreen = () => {
   const handleSelectIngredient = (ingredient) => {
     if (selectedIngredients.includes(ingredient.id)) {
       removeIngredient(ingredient.id);
+      // Remove from details
+      const newDetails = { ...selectedIngredientDetails };
+      delete newDetails[ingredient.id];
+      setSelectedIngredientDetails(newDetails);
     } else {
       addIngredient(ingredient.id);
+      // Store ingredient details for display
+      setSelectedIngredientDetails({
+        ...selectedIngredientDetails,
+        [ingredient.id]: {
+          id: ingredient.id,
+          name: ingredient.name,
+          category: ingredient.category,
+        },
+      });
     }
+    
+    // Dismiss keyboard after selection
+    Keyboard.dismiss();
+  };
+
+  const handleRemoveSelected = (ingredientId) => {
+    removeIngredient(ingredientId);
+    const newDetails = { ...selectedIngredientDetails };
+    delete newDetails[ingredientId];
+    setSelectedIngredientDetails(newDetails);
   };
 
   const handleFindRecipes = async () => {
@@ -72,6 +98,7 @@ const ManualIngredientsScreen = () => {
       return;
     }
 
+    Keyboard.dismiss();
     setLoading(true);
     try {
       const result = await matchRecipes(selectedIngredients, 20);
@@ -82,6 +109,10 @@ const ManualIngredientsScreen = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const dismissKeyboard = () => {
+    Keyboard.dismiss();
   };
 
   const renderIngredientItem = ({ item }) => {
@@ -101,88 +132,127 @@ const ManualIngredientsScreen = () => {
           )}
         </View>
         <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-          {isSelected && <Text style={styles.checkmark}>✓</Text>}
+          {isSelected && (
+            <FontAwesome5 name="check" size={12} color={Colors.textLight} />
+          )}
         </View>
       </TouchableOpacity>
     );
   };
 
-  return (
-    <SafeAreaView style={styles.container} edges={[]}>
-      <View style={styles.searchContainer}>
-        <View style={styles.searchInputContainer}>
-          <FontAwesome5 
-            name="search" 
-            size={16} 
-            color={Colors.textSecondary} 
-            style={styles.searchIcon}
-          />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search ingredients (e.g., chicken, rice, tomato)"
-            value={searchQuery}
-            onChangeText={handleSearch}
-            autoCapitalize="none"
-            autoCorrect={false}
-            clearButtonMode="while-editing"
-          />
-        </View>
-        {selectedIngredients.length > 0 && (
-          <Text style={styles.selectedCount}>
-            {selectedIngredients.length} selected
-          </Text>
-        )}
-      </View>
+  const renderSelectedChip = (ingredientId) => {
+    const ingredient = selectedIngredientDetails[ingredientId];
+    if (!ingredient) return null;
 
-      {error && (
-        <View style={styles.errorContainer}>
-          <FontAwesome5 name="exclamation-circle" size={16} color={Colors.error} />
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      )}
-
-      {searchResults.length > 0 ? (
-        <FlatList
-          data={searchResults}
-          renderItem={renderIngredientItem}
-          keyExtractor={(item) => item.id.toString()}
-          style={styles.list}
-          contentContainerStyle={[
-            styles.listContent,
-            { paddingBottom: Platform.OS === 'ios' ? 90 : 70 }
-          ]}
-        />
-      ) : (
-        <View style={styles.emptyState}>
-          <FontAwesome5 name="search" size={48} color={Colors.textSecondary} />
-          <Text style={styles.emptyText}>
-            {searchQuery.length < 2
-              ? 'Start typing to search ingredients'
-              : searching
-              ? 'Searching...'
-              : error
-              ? ''
-              : 'No ingredients found'}
-          </Text>
-          {searchQuery.length >= 2 && !searching && searchResults.length === 0 && !error && (
-            <Text style={styles.emptyHint}>
-              Try searching for common ingredients like "chicken", "rice", or "tomato"
-            </Text>
-          )}
-        </View>
-      )}
-
-      <View style={styles.footer}>
+    return (
+      <View key={ingredientId} style={styles.selectedChip}>
+        <Text style={styles.chipText} numberOfLines={1}>
+          {ingredient.name}
+        </Text>
         <TouchableOpacity
-          style={[styles.button, selectedIngredients.length === 0 && styles.buttonDisabled]}
-          onPress={handleFindRecipes}
-          disabled={loading || selectedIngredients.length === 0}
+          onPress={() => handleRemoveSelected(ingredientId)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Text style={styles.buttonText}>
-            {loading ? 'Finding Recipes...' : selectedIngredients.length > 0 ? `Find Recipes (${selectedIngredients.length})` : 'Select ingredients first'}
-          </Text>
+          <FontAwesome5 name="times" size={14} color={Colors.textLight} />
         </TouchableOpacity>
       </View>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.container} edges={[]}>
+      <TouchableWithoutFeedback onPress={dismissKeyboard}>
+        <View style={styles.container}>
+          <View style={styles.searchContainer}>
+            <View style={styles.searchInputContainer}>
+              <FontAwesome5 
+                name="search" 
+                size={16} 
+                color={Colors.textSecondary} 
+                style={styles.searchIcon}
+              />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search ingredients (e.g., chicken, rice, tomato)"
+                value={searchQuery}
+                onChangeText={handleSearch}
+                autoCapitalize="none"
+                autoCorrect={false}
+                clearButtonMode="while-editing"
+                returnKeyType="search"
+                onSubmitEditing={dismissKeyboard}
+              />
+            </View>
+          </View>
+
+          {/* Selected Ingredients Section */}
+          {selectedIngredients.length > 0 && (
+            <View style={styles.selectedSection}>
+              <Text style={styles.selectedTitle}>
+                Selected ({selectedIngredients.length})
+              </Text>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.selectedChipsContainer}
+              >
+                {selectedIngredients.map(renderSelectedChip)}
+              </ScrollView>
+            </View>
+          )}
+
+          {error && (
+            <View style={styles.errorContainer}>
+              <FontAwesome5 name="exclamation-circle" size={16} color={Colors.error} />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+
+          {searchResults.length > 0 ? (
+            <FlatList
+              data={searchResults}
+              renderItem={renderIngredientItem}
+              keyExtractor={(item) => item.id.toString()}
+              style={styles.list}
+              contentContainerStyle={[
+                styles.listContent,
+                { paddingBottom: Platform.OS === 'ios' ? 90 : 70 }
+              ]}
+              keyboardShouldPersistTaps="handled"
+            />
+          ) : (
+            <View style={styles.emptyState}>
+              <FontAwesome5 name="search" size={48} color={Colors.textSecondary} />
+              <Text style={styles.emptyText}>
+                {searchQuery.length < 2
+                  ? 'Start typing to search ingredients'
+                  : searching
+                  ? 'Searching...'
+                  : error
+                  ? ''
+                  : 'No ingredients found'}
+              </Text>
+              {searchQuery.length >= 2 && !searching && searchResults.length === 0 && !error && (
+                <Text style={styles.emptyHint}>
+                  Try searching for common ingredients like "chicken", "rice", or "tomato"
+                </Text>
+              )}
+            </View>
+          )}
+
+          <View style={styles.footer}>
+            <TouchableOpacity
+              style={[styles.button, selectedIngredients.length === 0 && styles.buttonDisabled]}
+              onPress={handleFindRecipes}
+              disabled={loading || selectedIngredients.length === 0}
+            >
+              <Text style={styles.buttonText}>
+                {loading ? 'Finding Recipes...' : selectedIngredients.length > 0 ? `Find Recipes (${selectedIngredients.length})` : 'Select ingredients first'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
     </SafeAreaView>
   );
 };
@@ -194,6 +264,7 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     padding: 20,
+    paddingBottom: 12,
     backgroundColor: Colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
@@ -215,10 +286,38 @@ const styles = StyleSheet.create({
     padding: 14,
     fontSize: 16,
   },
-  selectedCount: {
-    marginTop: 8,
+  selectedSection: {
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  selectedTitle: {
     fontSize: 14,
-    color: Colors.primary,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 12,
+  },
+  selectedChipsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  selectedChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primary,
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingLeft: 16,
+    paddingRight: 12,
+    gap: 8,
+    maxWidth: 200,
+  },
+  chipText: {
+    fontSize: 14,
+    color: Colors.textLight,
     fontWeight: '600',
   },
   errorContainer: {
@@ -287,11 +386,6 @@ const styles = StyleSheet.create({
   checkboxSelected: {
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
-  },
-  checkmark: {
-    color: Colors.textLight,
-    fontSize: 16,
-    fontWeight: 'bold',
   },
   emptyState: {
     flex: 1,

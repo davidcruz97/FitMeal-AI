@@ -9,38 +9,38 @@ FitMeal-AI/
 │   │   ├── recipe.py
 │   │   └── meal_scan.py
 │   │
-│   ├── api/                     # REST API for mobile app
-│   │   ├── auth.py              # JWT authentication
-│   │   ├── scan.py              # Photo upload & detection
-│   │   ├── ingredients.py       # Ingredient endpoints
-│   │   ├── recipes.py           # Recipe endpoints
-│   │   └── meals.py             # Meal logging
+│   ├── api/                         # REST API for mobile app
+│   │   ├── auth.py                  # JWT authentication
+│   │   ├── coach.py    
+│   │   ├── ai.py    
+│   │   ├── onboarding.py    
+│   │   ├── scan.py                  # Photo upload & detection
+│   │   ├── ingredients.py           # Ingredient endpoints
+│   │   ├── recipes.py               # Recipe endpoints
+│   │   └── meals.py                 # Meal logging
 │   │
 │   ├── vision/
-│   │   ├── detector.py          # YOLOv8 detection
-│   │   ├── hybrid_detector.py   # YOLOv8 and Clarifai detection
-│   │   ├── clarifai_detector.py # Clarifai detection
-│   │   ├── ingredient_mapper.py
-│   │   └── models/
+│   │   ├── claude_detector.py 
+│   │   └── ingredient_mapper.py
 │   │
-│   ├── matching/
-│   │   ├── recipe_matcher.py
-│   │   └── scoring.py
+│   ├── ai/
+│   │   ├── llm_manager.py
+│   │   ├── nutrition_calculator.py  # BMR/TDEE/Macros (admin)
+│   │   ├── meal_planner.py          # Weekly planning (admin)
+│   │   ├── meal_recommender.py      # LLM-based recommendations
+│   │   └── nutrition_advisor.py     # LLM Q&A
 │   │
-│   ├── text_processing/
-│   │   └── autocomplete.py
-│   │
-│   ├── admin/                   # Web admin panel
-│   │   ├── __init__.py
-│   │   ├── routes.py            # Web routes
-│   │   ├── forms.py             # Recipe forms
-│   │   └── usda_api.py          # USDA integration
-│   │
-│   ├── auth/                    # Web authentication
-│   │   ├── routes.py
-│   │   └── forms.py
-│   │
-│   ├── templates/               # HTML for admin panel
+│   ├── admin/                       # Web admin panel
+│   │   ├── __init__.py    
+│   │   ├── routes.py                # Web routes
+│   │   ├── forms.py                 # Recipe forms
+│   │   └── usda_api.py              # USDA integration
+│   │    
+│   ├── auth/                        # Web authentication
+│   │   ├── routes.py    
+│   │   └── forms.py    
+│   │    
+│   ├── templates/                   # HTML for admin panel
 │   │   ├── base.html
 │   │   ├── auth/
 │   │   │   └── login.html
@@ -128,6 +128,7 @@ FitMeal-AI/
 │   └── API.md
 │
 ├── migrations/
+├── test_ollama.py             # For testing LLM performance in VPS
 ├── config.py
 ├── run.py
 ├── requirements.txt

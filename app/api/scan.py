@@ -5,11 +5,12 @@ from werkzeug.utils import secure_filename
 from app import db, limiter
 from app.models.meal_scan import MealScan
 from app.models.user import User
-from app.utils.logger import log_detection_start, log_detection_result, log_performance
+from app.utils.logger import log_detection_start, log_detection_result
+from app.vision.claude_detector import get_claude_detector
+from app.vision.ingredient_mapper import map_detection_to_ingredient
 import os
 import uuid
 from datetime import datetime
-from app.vision.hybrid_detector import detect_ingredients_hybrid
 import time
 
 bp = Blueprint('api_scan', __name__)
@@ -26,7 +27,7 @@ def allowed_file(filename):
 @limiter.limit("20 per hour")  # Limit photo uploads
 def upload_scan():
     """
-    Upload a photo for ingredient detection
+    Upload a photo for ingredient detection using Claude Vision
     
     Form data:
         image: file (required)
@@ -104,12 +105,58 @@ def upload_scan():
                 
                 start_time = time.time()
                 
-                # Run hybrid detection (YOLOv8 + Clarifai)
-                detection_results = detect_ingredients_hybrid(filepath)
+                # Run Claude Vision detection
+                logger.debug("🤖 Starting Claude Vision detection...")
+                claude_detector = get_claude_detector()
+                detection_results = claude_detector.detect_ingredients(
+                    filepath,
+                    min_confidence=0.5  # 50% confidence threshold
+                )
+                
+                # Check for errors
+                if 'error' in detection_results:
+                    raise Exception(detection_results['error'])
                 
                 # Get detected ingredients
-                detected_ingredients = detection_results.get('detections', [])
+                claude_detections = detection_results.get('detections', [])
                 
+                logger.debug(
+                    f"✅ Claude detected {len(claude_detections)} ingredients "
+                    f"(filtered from {len(detection_results.get('all_detections', []))} total)"
+                )
+                
+                # Map detections to database ingredients
+                matched_ingredients = []
+                unmatched_detections = []
+                
+                for detection in claude_detections:
+                    food_name = detection['class_name']
+                    confidence = detection['confidence']
+                    
+                    logger.debug(f"🔍 Mapping Claude detection '{food_name}'...")
+                    
+                    # Map to ingredient
+                    ingredient = map_detection_to_ingredient(food_name)
+                    
+                    if ingredient:
+                        matched_ingredients.append({
+                            'ingredient_id': ingredient['id'],
+                            'ingredient_name': ingredient['name'],
+                            'detected_as': food_name,
+                            'confidence': confidence,
+                            'source': 'claude',
+                        })
+                        logger.debug(f"   ✓ Matched '{food_name}' → '{ingredient['name']}'")
+                    else:
+                        unmatched_detections.append(food_name)
+                        logger.debug(f"   ✗ No match for '{food_name}'")
+                
+                if unmatched_detections:
+                    logger.info(
+                        f"⚠️ Unmatched detections: {', '.join(unmatched_detections)}"
+                    )
+                
+                detected_ingredients = matched_ingredients
                 processing_time_ms = int((time.time() - start_time) * 1000)
                 
                 # Log detection results
@@ -122,7 +169,8 @@ def upload_scan():
                 
                 logger.info(
                     f"✅ Detection completed for scan {scan_id}: "
-                    f"{len(detected_ingredients)} ingredients found"
+                    f"{len(detected_ingredients)} ingredients found "
+                    f"({len(claude_detections)} detected, {len(matched_ingredients)} mapped)"
                 )
                 
             except Exception as e:
@@ -135,7 +183,7 @@ def upload_scan():
                     exc_info=True
                 )
         else:
-            logger.info(f"⏭️  Auto-detection skipped for scan {scan_id} [User: {user_id}]")
+            logger.info(f"⏭️ Auto-detection skipped for scan {scan_id} [User: {user_id}]")
         
         db.session.commit()
         
@@ -171,8 +219,8 @@ def get_scan(scan_id):
     try:
         scan = MealScan.query.get(scan_id)
         
-        if not scan or scan.is_deleted:
-            logger.warning(f"⚠️  Scan not found: {scan_id} [User: {user_id}]")
+        if not scan:
+            logger.warning(f"⚠️ Scan not found: {scan_id} [User: {user_id}]")
             return jsonify({'error': 'Scan not found'}), 404
         
         # Check ownership
@@ -213,7 +261,7 @@ def get_scan_history():
         per_page = min(int(request.args.get('per_page', 20)), 100)
         
         # Build query
-        query = MealScan.get_active_query().filter_by(user_id=user_id)
+        query = MealScan.query.filter_by(user_id=user_id)
         
         # Order by most recent first
         query = query.order_by(MealScan.created_at.desc())
@@ -265,8 +313,8 @@ def confirm_ingredients(scan_id):
         
         scan = MealScan.query.get(scan_id)
         
-        if not scan or scan.is_deleted:
-            logger.warning(f"⚠️  Scan not found: {scan_id} [User: {user_id}]")
+        if not scan:
+            logger.warning(f"⚠️ Scan not found: {scan_id} [User: {user_id}]")
             return jsonify({'error': 'Scan not found'}), 404
         
         # Check ownership
@@ -306,15 +354,15 @@ def confirm_ingredients(scan_id):
 @bp.route('/<int:scan_id>', methods=['DELETE'])
 @jwt_required()
 def delete_scan(scan_id):
-    """Delete (soft delete) a scan"""
+    """Delete a scan (hard delete)"""
     logger = current_app.logger
     user_id = int(get_jwt_identity())
     
     try:
         scan = MealScan.query.get(scan_id)
         
-        if not scan or scan.is_deleted:
-            logger.warning(f"⚠️  Scan not found: {scan_id} [User: {user_id}]")
+        if not scan:
+            logger.warning(f"⚠️ Scan not found: {scan_id} [User: {user_id}]")
             return jsonify({'error': 'Scan not found'}), 404
         
         # Check ownership
@@ -324,10 +372,11 @@ def delete_scan(scan_id):
             )
             return jsonify({'error': 'Access denied'}), 403
         
-        # Soft delete
-        scan.soft_delete()
+        # Hard delete
+        db.session.delete(scan)
+        db.session.commit()
         
-        logger.info(f"🗑️  Scan deleted: {scan_id} [User: {user_id}]")
+        logger.info(f"🗑️ Scan deleted: {scan_id} [User: {user_id}]")
         
         return jsonify({
             'message': 'Scan deleted successfully'

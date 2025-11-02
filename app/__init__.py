@@ -94,6 +94,8 @@ def create_app(config_name=None):
             app.register_blueprint(api_recipes.bp, url_prefix='/api/recipes')
             from app.api import meals as api_meals
             app.register_blueprint(api_meals.bp, url_prefix='/api/meals')
+            from app.api import onboarding
+            app.register_blueprint(onboarding.bp, url_prefix='/api/onboarding')
             
             # Exempt API routes from CSRF (they use JWT authentication instead)
             csrf.exempt(api_auth.bp)
@@ -101,17 +103,27 @@ def create_app(config_name=None):
             csrf.exempt(api_ingredients.bp)
             csrf.exempt(api_recipes.bp)
             csrf.exempt(api_meals.bp)
+            csrf.exempt(onboarding.bp)
     
         except Exception as e:
             app.logger.warning(f"Could not register API blueprints for mobile app: {e}")
           
-        # Admin Web Panel Blueprints
+        # Admin/Coach Web Panel Blueprints
         try:
             from app.admin import routes as admin_routes
             app.register_blueprint(admin_routes.bp, url_prefix='/admin')
-
             # from app.auth import routes as auth_routes
             # app.register_blueprint(auth_routes.bp, url_prefix='/auth')
+            
+            # Register coach blueprint
+            from app.api import coach
+            app.register_blueprint(coach.bp, url_prefix='/api/coach')
+            
+            # Register AI blueprint
+            from app.api import ai
+            app.register_blueprint(ai.bp, url_prefix='/api/ai')
+            csrf.exempt(ai.bp)  # AI endpoints use JWT
+            
         except Exception as e:
             app.logger.warning(f"Could not register admin blueprints: {e}")
         

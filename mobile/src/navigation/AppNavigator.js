@@ -7,6 +7,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { Platform } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import Colors from '../constants/colors';
+import { useOnboarding } from '../context/OnBoardingContext';
 
 // Screens
 import SplashScreen from '../screens/SplashScreen';
@@ -32,6 +33,8 @@ import AgeScreen from '../screens/onboarding/AgeScreen';
 import HeightScreen from '../screens/onboarding/HeightScreen';
 import WeightScreen from '../screens/onboarding/WeightScreen';
 import WorkoutDaysScreen from '../screens/onboarding/WorkoutDaysScreen';
+import OnboardingProcessingScreen from '../screens/onboarding/OnboardingProcessingScreen';
+import OnboardingResultsScreen from '../screens/onboarding/OnboardingResultsScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -115,13 +118,15 @@ const MainTabs = () => {
 // Main App Navigator
 const AppNavigator = () => {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const { isViewingResults } = useOnboarding();
 
   if (isLoading) {
     return <SplashScreen />;
   }
 
   // Check if user needs to complete onboarding
-  const needsOnboarding = isAuthenticated && user && !user.profile_completed;
+  // If isViewingResults is true, keep them in onboarding flow even if profile is completed
+  const needsOnboarding = isAuthenticated && user && (!user.profile_completed || isViewingResults);
 
   return (
     <NavigationContainer>
@@ -221,6 +226,22 @@ const AppNavigator = () => {
             <Stack.Screen 
               name="OnboardingWorkoutDays" 
               component={WorkoutDaysScreen} 
+              options={{ 
+                headerShown: false,
+                gestureEnabled: false,
+              }}
+            />
+            <Stack.Screen 
+              name="OnboardingProcessing" 
+              component={OnboardingProcessingScreen} 
+              options={{ 
+                headerShown: false,
+                gestureEnabled: false,
+              }}
+            />
+            <Stack.Screen 
+              name="OnboardingResults" 
+              component={OnboardingResultsScreen} 
               options={{ 
                 headerShown: false,
                 gestureEnabled: false,

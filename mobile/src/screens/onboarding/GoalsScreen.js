@@ -7,11 +7,13 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useOnboarding } from '../../context/OnBoardingContext';
+import { useAuth } from '../../context/AuthContext';
 import Colors from '../../constants/colors';
 
 const GOAL_OPTIONS = [
@@ -31,14 +33,44 @@ const GOAL_OPTIONS = [
 
 const GoalsScreen = () => {
   const navigation = useNavigation();
-  const { onboardingData, updateOnboardingData } = useOnboarding();
+  const { onboardingData, updateOnboardingData, setIsViewingResults, resetOnboarding } = useOnboarding();
+  const { user } = useAuth();
   const [selectedGoals, setSelectedGoals] = useState(onboardingData.fitness_goals || []);
+
+  // Check if this is a re-run (user has profile_completed = true)
+  const isRerunning = user?.profile_completed === true;
 
   const toggleGoal = (goalId) => {
     if (selectedGoals.includes(goalId)) {
       setSelectedGoals(selectedGoals.filter(id => id !== goalId));
     } else {
       setSelectedGoals([...selectedGoals, goalId]);
+    }
+  };
+
+  const handleBack = () => {
+    if (isRerunning) {
+      // User is re-running onboarding - confirm cancellation
+      Alert.alert(
+        'Cancel Profile Update',
+        'Are you sure you want to cancel updating your profile? Your current settings will be kept.',
+        [
+          { text: 'Continue Editing', style: 'cancel' },
+          {
+            text: 'Cancel Update',
+            style: 'destructive',
+            onPress: () => {
+              // Reset onboarding data and clear the viewing flag
+              resetOnboarding();
+              setIsViewingResults(false);
+              // AppNavigator will automatically switch back to main app
+            },
+          },
+        ]
+      );
+    } else {
+      // New user - just go back normally (to auth screen)
+      navigation.goBack();
     }
   };
 
@@ -57,7 +89,7 @@ const GoalsScreen = () => {
         <View style={styles.header}>
           <TouchableOpacity 
             style={styles.backButton}
-            onPress={() => navigation.goBack()}
+            onPress={handleBack}
           >
             <FontAwesome5 name="chevron-left" size={20} color={Colors.primary} />
           </TouchableOpacity>

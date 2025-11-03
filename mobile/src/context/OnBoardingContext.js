@@ -1,3 +1,4 @@
+// mobile/src/context/OnBoardingContext.js
 import React, { createContext, useState, useContext } from 'react';
 
 const OnBoardingContext = createContext({});
@@ -33,7 +34,13 @@ export const OnBoardingProvider = ({ children }) => {
     
     // Screen 10: Workout days (array of selected days)
     workout_days: [],
+    
+    // Temporary storage for completed user data (before showing results)
+    completedUserData: null,
   });
+
+  // Flag to indicate we're viewing onboarding results
+  const [isViewingResults, setIsViewingResults] = useState(false);
 
   const updateOnboardingData = (field, value) => {
     setOnboardingData(prev => ({
@@ -54,6 +61,7 @@ export const OnBoardingProvider = ({ children }) => {
       height_cm: null,
       current_weight_kg: null,
       workout_days: [],
+      completedUserData: null,
     });
   };
 
@@ -61,6 +69,8 @@ export const OnBoardingProvider = ({ children }) => {
     onboardingData,
     updateOnboardingData,
     resetOnboarding,
+    isViewingResults,
+    setIsViewingResults,
   };
 
   return (

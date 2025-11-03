@@ -14,7 +14,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useOnboarding } from '../../context/OnBoardingContext';
-import { useAuth } from '../../context/AuthContext';
 import Colors from '../../constants/colors';
 import apiClient from '../../api/client';
 
@@ -30,8 +29,7 @@ const DAYS = [
 
 const WorkoutDaysScreen = () => {
   const navigation = useNavigation();
-  const { onboardingData, updateOnboardingData, resetOnboarding } = useOnboarding();
-  const { refreshUser } = useAuth();
+  const { onboardingData, updateOnboardingData, setIsViewingResults } = useOnboarding();
   const [selectedDays, setSelectedDays] = useState(onboardingData.workout_days || []);
   const [loading, setLoading] = useState(false);
 
@@ -73,13 +71,14 @@ const WorkoutDaysScreen = () => {
 
       console.log('Onboarding response:', response.data);
 
-      // Refresh user data to get updated profile_completed status
-      await refreshUser();
+      // Store the updated user data in onboarding context temporarily
+      updateOnboardingData('completedUserData', response.data.user);
+      
+      // Set flag to indicate we're viewing results (prevents AppNavigator from switching)
+      setIsViewingResults(true);
 
-      // Reset onboarding context
-      resetOnboarding();
-
-      // Navigation will automatically happen when user.profile_completed becomes true
+      // Navigate to processing screen
+      navigation.navigate('OnboardingProcessing');
       
     } catch (error) {
       console.error('Onboarding submission error:', error);

@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { loginUser, registerUser } from '../api/auth';
+import { loginUser, registerUser, getCurrentUser } from '../api/auth';
 import { saveToken, getToken, saveUser, getUser, clearStorage } from '../utils/storage';
 import { getMealHistory, getNutritionStats } from '../api/meals';
 
@@ -27,11 +27,29 @@ export const AuthProvider = ({ children }) => {
       const userData = await getUser();
 
       if (token && userData) {
-        setUser(userData);
+        // Try to fetch fresh user data from API to check profile_completed status
+        try {
+          const response = await getCurrentUser();
+          const freshUserData = response.user;
+          
+          // Update storage with fresh data
+          await saveUser(freshUserData);
+          setUser(freshUserData);
+          
+          console.log('✅ Loaded fresh user data from API');
+          console.log('   Profile completed:', freshUserData.profile_completed);
+        } catch (apiError) {
+          // If API fails, use cached data
+          console.log('⚠️  API refresh failed, using cached data:', apiError.message);
+          setUser(userData);
+        }
+        
         setIsAuthenticated(true);
         
-        // Preload dashboard data while splash screen is showing
-        await preloadDashboardData();
+        // Preload dashboard data while splash screen is showing (only if profile is complete)
+        if (userData.profile_completed) {
+          await preloadDashboardData();
+        }
       }
     } catch (error) {
       console.error('Error checking auth status:', error);
@@ -87,8 +105,10 @@ export const AuthProvider = ({ children }) => {
 
       setUser(response.user);
 
-      // Preload dashboard data for logged in user
-      await preloadDashboardData();
+      // Preload dashboard data for logged in user (only if profile complete)
+      if (response.user.profile_completed) {
+        await preloadDashboardData();
+      }
       
       // Ensure minimum splash time
       const elapsedTime = Date.now() - startTime;
@@ -125,9 +145,6 @@ export const AuthProvider = ({ children }) => {
       await saveUser(response.user);
 
       setUser(response.user);
-
-      // Preload dashboard data for new user
-      await preloadDashboardData();
       
       // Ensure minimum splash time
       const elapsedTime = Date.now() - startTime;
@@ -154,8 +171,28 @@ export const AuthProvider = ({ children }) => {
     try {
       const token = await getToken();
       if (token) {
-        const response = await apiClient.get('/auth/me');
-        setUser(response.data.user);
+        // Try to fetch from API first
+        try {
+          const response = await getCurrentUser();
+          const updatedUser = response.user;
+          
+          // Save to storage
+          await saveUser(updatedUser);
+          
+          // Update state
+          setUser(updatedUser);
+          
+          console.log('User refreshed successfully from API');
+          console.log('   Profile completed:', updatedUser.profile_completed);
+        } catch (apiError) {
+          // If API call fails, load from storage instead
+          console.log('API refresh failed, loading from storage:', apiError.message);
+          const userData = await getUser();
+          if (userData) {
+            setUser(userData);
+            console.log('User loaded from storage');
+          }
+        }
       }
     } catch (error) {
       console.error('Failed to refresh user:', error);

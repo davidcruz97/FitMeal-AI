@@ -14,6 +14,7 @@ import SplashScreen from '../screens/SplashScreen';
 import AuthScreen from '../screens/AuthScreen';
 import HomeScreen from '../screens/HomeScreen';
 import CameraScreen from '../screens/CameraScreen';
+import AIAssistantScreen from '../screens/AIAssistantScreen';
 import ReviewIngredientsScreen from '../screens/ReviewIngredientsScreen';
 import ManualIngredientsScreen from '../screens/ManualIngredientsScreen';
 import RecipeMatchesScreen from '../screens/RecipeMatchesScreen';
@@ -78,7 +79,7 @@ const MainTabs = () => {
           tabBarIcon: ({ color, size }) => (
             <FontAwesome5 name="home" size={20} color={color} />
           ),
-          title: 'Dashboard',
+          title: 'Home',
         }}
       />
       <Tab.Screen
@@ -88,7 +89,17 @@ const MainTabs = () => {
           tabBarIcon: ({ color, size }) => (
             <FontAwesome5 name="camera" size={20} color={color} solid />
           ),
-          title: 'Scan Ingredients',
+          title: 'AI-Scan',
+        }}
+      />
+      <Tab.Screen
+        name="AI"
+        component={AIAssistantScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <FontAwesome5 name="robot" size={20} color={color} solid />
+          ),
+          title: 'AI-Buddy',
         }}
       />
       <Tab.Screen
@@ -98,7 +109,7 @@ const MainTabs = () => {
           tabBarIcon: ({ color, size }) => (
             <FontAwesome5 name="chart-bar" size={20} color={color} />
           ),
-          title: 'Meal History',
+          title: 'History',
         }}
       />
       <Tab.Screen
@@ -108,7 +119,7 @@ const MainTabs = () => {
           tabBarIcon: ({ color, size }) => (
             <FontAwesome5 name="user" size={20} color={color} solid />
           ),
-          title: 'Profile',
+          title: 'Me',
         }}
       />
     </Tab.Navigator>

@@ -74,6 +74,7 @@ FitMeal-AI/
 │   │
 │   ├── src/
 │   │   ├── api/
+│   │   │   ├── ai.js
 │   │   │   ├── client.js            # Axios instance with JWT
 │   │   │   ├── auth.js              # Auth API calls
 │   │   │   ├── scan.js              # Scan API calls
@@ -88,21 +89,37 @@ FitMeal-AI/
 │   │   │   └── MacroDisplay.js
 │   │   │
 │   │   ├── screens/
-│   │   │   ├── AuthScreen.js        # Login/Register
-│   │   │   ├── HomeScreen.js        # Dashboard
-│   │   │   ├── CameraScreen.js      # Take/upload photo
-│   │   │   ├── ReviewScreen.js      # Review ingredients
-│   │   │   ├── ResultsScreen.js     # Recipe matches
+│   │   │   ├── onboarding/
+│   │   │   │   ├── ActivityScreen.js
+│   │   │   │   ├── AgeScreen.js
+│   │   │   │   ├── AllergiesScreen.js
+│   │   │   │   ├── GenderScreen.js
+│   │   │   │   ├── GoalsScreen.js
+│   │   │   │   ├── HeightScreen.js
+│   │   │   │   ├── LiftingScreen.js
+│   │   │   │   ├── MedicalScreen.js
+│   │   │   │   ├── OnboardingProcessingScreen.js
+│   │   │   │   ├── OnboardingResultgScreen.js
+│   │   │   │   ├── WeightScreen.js
+│   │   │   │   └── WorkoutDaysScreen.js
+│   │   │   │
+│   │   │   ├── AIAssistantScreen.js 
+│   │   │   ├── AuthScreen.js         
+│   │   │   ├── HomeScreen.js        
+│   │   │   ├── CameraScreen.js         
+│   │   │   ├── ReviewScreen.js        
+│   │   │   ├── ResultsScreen.js       
 │   │   │   ├── RecipeDetailScreen.js
 │   │   │   ├── HistoryScreen.js
 │   │   │   └── ProfileScreen.js
 │   │   │
 │   │   ├── navigation/
-│   │   │   └── AppNavigator.js      # React Navigation setup
+│   │   │   └── AppNavigator.js
 │   │   │
 │   │   ├── context/
-│   │   │   ├── AuthContext.js       # Auth state
-│   │   │   └── ScanContext.js       # Scan state
+│   │   │   ├── AuthContext.js     
+│   │   │   ├── OnBoardingContext.js     
+│   │   │   └── ScanContext.js   
 │   │   │
 │   │   ├── utils/
 │   │   │   ├── storage.js           # AsyncStorage helpers

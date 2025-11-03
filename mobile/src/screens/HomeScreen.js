@@ -100,6 +100,36 @@ const HomeScreen = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
+      {/* Quick Actions */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Quick Actions</Text>
+        <View style={styles.actionsGrid}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('Camera')}
+          >
+            <FontAwesome5 name="camera" size={32} color={Colors.primary} solid />
+            <Text style={styles.actionLabel}>Scan Ingredients</Text>
+          </TouchableOpacity>
+              
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('ManualIngredients')}
+          >
+            <FontAwesome5 name="search" size={32} color={Colors.primary} />
+            <Text style={styles.actionLabel}>Search Recipes</Text>
+          </TouchableOpacity>
+        </View>
+              
+        <TouchableOpacity
+          style={styles.actionButtonFull}
+          onPress={() => navigation.navigate('AI')}
+        >
+          <FontAwesome5 name="robot" size={32} color={Colors.primary} solid />
+          <Text style={styles.actionLabel}>Ask AI</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Today's Nutrition Summary */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Today's Nutrition</Text>
@@ -150,28 +180,6 @@ const HomeScreen = () => {
             <Text style={styles.emptyText}>No meals logged yet today</Text>
           </View>
         )}
-      </View>
-
-      {/* Quick Actions */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Quick Actions</Text>
-        <View style={styles.actionsGrid}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate('Camera')}
-          >
-            <FontAwesome5 name="camera" size={32} color={Colors.primary} solid />
-            <Text style={styles.actionLabel}>Scan Ingredients</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate('ManualIngredients')}
-          >
-            <FontAwesome5 name="search" size={32} color={Colors.primary} />
-            <Text style={styles.actionLabel}>Search Recipes</Text>
-          </TouchableOpacity>
-        </View>
       </View>
       </ScrollView>
     </SafeAreaView>
@@ -341,6 +349,14 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: 'center',
     gap: 8,
+  },
+  actionButtonFull: {
+    backgroundColor: Colors.background,
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
   },
   actionLabel: {
     fontSize: 14,

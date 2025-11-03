@@ -331,7 +331,7 @@ const AIAssistantScreen = () => {
           <FontAwesome5 name="graduation-cap" size={32} color={Colors.primary} />
           <Text style={styles.learnTitle}>Learn About Nutrition</Text>
           <Text style={styles.learnSubtitle}>
-            Tap any topic to get a quick explanation from Ale
+            Tap any topic to get a quick insight from Ale
           </Text>
         </View>
 
@@ -339,7 +339,11 @@ const AIAssistantScreen = () => {
           {nutritionTopics.map((topic) => (
             <TouchableOpacity
               key={topic.id}
-              style={[styles.topicCard, { borderColor: topic.color }]}
+              style={[
+                styles.topicCard, 
+                { borderColor: topic.color },
+                loading && styles.topicCardDisabled
+              ]}
               onPress={() => handleTopicPress(topic)}
               disabled={loading}
             >
@@ -357,9 +361,12 @@ const AIAssistantScreen = () => {
         </View>
 
         {loading && (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color={Colors.primary} />
-            <Text style={styles.loadingText}>Loading explanation...</Text>
+          <View style={styles.learnLoadingOverlay}>
+            <View style={styles.learnLoadingContent}>
+              <ActivityIndicator size="large" color={Colors.primary} />
+              <Text style={styles.learnLoadingText}>Ale is preparing your explanation...</Text>
+              <Text style={styles.learnLoadingSubtext}>This may take a moment</Text>
+            </View>
           </View>
         )}
       </ScrollView>
@@ -567,7 +574,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: Colors.secondary,
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
@@ -652,16 +659,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chip: {
-    backgroundColor: Colors.primary + '20',
+    backgroundColor: Colors.surface,
     borderRadius: 20,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: Colors.primary + '40',
+    borderWidth: 2,
+    borderColor: Colors.primary,
   },
   chipText: {
     fontSize: 13,
-    color: Colors.primary,
+    color: Colors.text,
     fontWeight: '600',
   },
   inputContainer: {
@@ -738,6 +745,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  topicCardDisabled: {
+    opacity: 0.5,
+  },
   topicIcon: {
     width: 64,
     height: 64,
@@ -750,10 +760,40 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.text,
   },
-  loadingOverlay: {
-    marginTop: 32,
+  learnLoadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
+    zIndex: 999,
+  },
+  learnLoadingContent: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    gap: 16,
+    maxWidth: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  learnLoadingText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    textAlign: 'center',
+  },
+  learnLoadingSubtext: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
   },
 });
 

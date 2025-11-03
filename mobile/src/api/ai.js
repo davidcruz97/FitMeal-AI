@@ -1,13 +1,16 @@
 // mobile/src/api/ai.js
 import client from './client';
 
+// AI requests can take longer, so we use a custom timeout
+const AI_TIMEOUT = 90000; // 90 seconds for AI operations
+
 /**
  * Warm up the AI model
  * Call this when user opens AI features for faster responses
  */
 export const warmupAI = async () => {
   try {
-    const response = await client.post('/ai/warmup');
+    const response = await client.post('/ai/warmup', {}, { timeout: AI_TIMEOUT });
     return response.data;
   } catch (error) {
     console.error('Warmup AI error:', error.response?.data || error.message);
@@ -20,7 +23,7 @@ export const warmupAI = async () => {
  */
 export const getAIStatus = async () => {
   try {
-    const response = await client.get('/ai/status');
+    const response = await client.get('/ai/status', { timeout: AI_TIMEOUT });
     return response.data;
   } catch (error) {
     console.error('Get AI status error:', error.response?.data || error.message);
@@ -37,7 +40,7 @@ export const getAIStatus = async () => {
  */
 export const getMealRecommendations = async (params = {}) => {
   try {
-    const response = await client.post('/ai/recommend-meals', params);
+    const response = await client.post('/ai/recommend-meals', params, { timeout: AI_TIMEOUT });
     return response.data;
   } catch (error) {
     console.error('Get meal recommendations error:', error.response?.data || error.message);
@@ -52,7 +55,7 @@ export const getMealRecommendations = async (params = {}) => {
  */
 export const askNutritionQuestion = async (question) => {
   try {
-    const response = await client.post('/ai/ask-nutrition', { question });
+    const response = await client.post('/ai/ask-nutrition', { question }, { timeout: AI_TIMEOUT });
     return response.data;
   } catch (error) {
     console.error('Ask nutrition question error:', error.response?.data || error.message);
@@ -65,7 +68,7 @@ export const askNutritionQuestion = async (question) => {
  */
 export const getMealTiming = async () => {
   try {
-    const response = await client.get('/ai/meal-timing');
+    const response = await client.get('/ai/meal-timing', { timeout: AI_TIMEOUT });
     return response.data;
   } catch (error) {
     console.error('Get meal timing error:', error.response?.data || error.message);
@@ -80,7 +83,7 @@ export const getMealTiming = async () => {
  */
 export const explainMacro = async (macroName) => {
   try {
-    const response = await client.get(`/ai/explain/${macroName}`);
+    const response = await client.get(`/ai/explain/${macroName}`, { timeout: AI_TIMEOUT });
     return response.data;
   } catch (error) {
     console.error('Explain macro error:', error.response?.data || error.message);
@@ -101,7 +104,7 @@ export const explainMacro = async (macroName) => {
  */
 export const generateRecipeForMacros = async (targets) => {
   try {
-    const response = await client.post('/ai/recipe-for-macros', targets);
+    const response = await client.post('/ai/recipe-for-macros', targets, { timeout: AI_TIMEOUT });
     return response.data;
   } catch (error) {
     console.error('Generate recipe error:', error.response?.data || error.message);
@@ -118,7 +121,7 @@ export const generateRecipeForMacros = async (targets) => {
  */
 export const modifyRecipe = async (params) => {
   try {
-    const response = await client.post('/ai/modify-recipe', params);
+    const response = await client.post('/ai/modify-recipe', params, { timeout: AI_TIMEOUT });
     return response.data;
   } catch (error) {
     console.error('Modify recipe error:', error.response?.data || error.message);

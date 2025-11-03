@@ -38,8 +38,12 @@ class NutritionAdvisor:
             allergen_names = []
             medical_conditions = []
             
-            if user_profile and user_profile.profile_completed:
-                context, allergen_names, medical_conditions = self._build_user_context(user_profile)
+            # Build context if user provided
+            if user_profile:
+                try:
+                    context, allergen_names, medical_conditions = self._build_user_context(user_profile)
+                except Exception as e:
+                    logger.warning(f"⚠️ Could not build user context: {e}")
                 
                 # Build safety instructions for the prompt
                 safety_instructions = self.safety.build_prompt_safety_instructions(
@@ -202,24 +206,22 @@ Focus on performance and recovery."""
     def explain_macro(self, macro_name):
         """
         Explain a macronutrient in simple terms
-        
+
         Args:
             macro_name: 'protein', 'carbs', 'fats', 'calories', 'fiber', etc.
-        
+
         Returns:
             Explanation as string
         """
         try:
-            prompt = f"""Explain {macro_name} to someone new to nutrition.
+            prompt = f"""Explain {macro_name} in 3-4 short paragraphs (max 500 words).
 
-Include:
-1. What it is (simple definition)
-2. Why it's important
-3. Best food sources
-4. How much they need (general guidelines)
-5. Common myths
+    Include:
+    1. What it is and why it matters (1 paragraph)
+    2. Best food sources (1 paragraph)  
+    3. Daily needs and tips (1 paragraph)
 
-Keep it simple and practical."""
+    Be concise, friendly, and practical. No lists, just flowing paragraphs."""
             
             logger.info(f"📚 Explaining macro: {macro_name}")
             
@@ -255,7 +257,7 @@ Keep it simple and practical."""
         
         # Physical stats
         if user.height and user.weight:
-            bmi = round(user.weight / ((user.height/100) ** 2), 1)
+            bmi = round(float(user.weight) / ((float(user.height)/100) ** 2), 1)
             context_parts.append(f"Physical: {user.height}cm, {user.weight}kg (BMI: {bmi})")
         
         # Goals

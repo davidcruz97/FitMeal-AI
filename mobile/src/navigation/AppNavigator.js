@@ -21,6 +21,18 @@ import LogMealScreen from '../screens/LogMealScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
+// Onboarding Screens
+import GoalsScreen from '../screens/onboarding/GoalsScreen';
+import GenderScreen from '../screens/onboarding/GenderScreen';
+import AllergiesScreen from '../screens/onboarding/AllergiesScreen';
+import MedicalScreen from '../screens/onboarding/MedicalScreen';
+import ActivityScreen from '../screens/onboarding/ActivityScreen';
+import LiftingScreen from '../screens/onboarding/LiftingScreen';
+import AgeScreen from '../screens/onboarding/AgeScreen';
+import HeightScreen from '../screens/onboarding/HeightScreen';
+import WeightScreen from '../screens/onboarding/WeightScreen';
+import WorkoutDaysScreen from '../screens/onboarding/WorkoutDaysScreen';
+
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -102,11 +114,14 @@ const MainTabs = () => {
 
 // Main App Navigator
 const AppNavigator = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return <SplashScreen />;
   }
+
+  // Check if user needs to complete onboarding
+  const needsOnboarding = isAuthenticated && user && !user.profile_completed;
 
   return (
     <NavigationContainer>
@@ -122,14 +137,98 @@ const AppNavigator = () => {
         }}
       >
         {!isAuthenticated ? (
-          // Auth Stack
+          // Auth Stack - Not logged in
           <Stack.Screen
             name="Auth"
             component={AuthScreen}
             options={{ headerShown: false }}
           />
+        ) : needsOnboarding ? (
+          // Onboarding Stack - Logged in but profile incomplete
+          <>
+            <Stack.Screen 
+              name="OnboardingGoals" 
+              component={GoalsScreen} 
+              options={{ 
+                headerShown: false,
+                gestureEnabled: false, // Prevent swipe back
+              }}
+            />
+            <Stack.Screen 
+              name="OnboardingGender" 
+              component={GenderScreen} 
+              options={{ 
+                headerShown: false,
+                gestureEnabled: false,
+              }}
+            />
+            <Stack.Screen 
+              name="OnboardingAllergies" 
+              component={AllergiesScreen} 
+              options={{ 
+                headerShown: false,
+                gestureEnabled: false,
+              }}
+            />
+            <Stack.Screen 
+              name="OnboardingMedical" 
+              component={MedicalScreen} 
+              options={{ 
+                headerShown: false,
+                gestureEnabled: false,
+              }}
+            />
+            <Stack.Screen 
+              name="OnboardingActivity" 
+              component={ActivityScreen} 
+              options={{ 
+                headerShown: false,
+                gestureEnabled: false,
+              }}
+            />
+            <Stack.Screen 
+              name="OnboardingLifting" 
+              component={LiftingScreen} 
+              options={{ 
+                headerShown: false,
+                gestureEnabled: false,
+              }}
+            />
+            <Stack.Screen 
+              name="OnboardingAge" 
+              component={AgeScreen} 
+              options={{ 
+                headerShown: false,
+                gestureEnabled: false,
+              }}
+            />
+            <Stack.Screen 
+              name="OnboardingHeight" 
+              component={HeightScreen} 
+              options={{ 
+                headerShown: false,
+                gestureEnabled: false,
+              }}
+            />
+            <Stack.Screen 
+              name="OnboardingWeight" 
+              component={WeightScreen} 
+              options={{ 
+                headerShown: false,
+                gestureEnabled: false,
+              }}
+            />
+            <Stack.Screen 
+              name="OnboardingWorkoutDays" 
+              component={WorkoutDaysScreen} 
+              options={{ 
+                headerShown: false,
+                gestureEnabled: false,
+              }}
+            />
+          </>
         ) : (
-          // Main App Stack
+          // Main App Stack - Logged in and profile complete
           <>
             <Stack.Screen
               name="MainTabs"

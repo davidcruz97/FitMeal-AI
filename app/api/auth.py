@@ -116,8 +116,8 @@ def login():
             logger.warning(f"❌ Login failed: Missing credentials for {email}")
             return jsonify({'error': 'Email and password are required'}), 400
         
-        # Find user
-        user = User.query.filter_by(email=email, is_deleted=False).first()
+        # Find user (REMOVED is_deleted filter - using hard delete now)
+        user = User.query.filter_by(email=email).first()
         
         if not user or not user.check_password(password):
             logger.warning(f"❌ Login failed: Invalid credentials for {email}")
@@ -164,10 +164,10 @@ def get_current_user():
         # Get user ID from JWT token
         user_id = int(get_jwt_identity())
         
-        # Find user
+        # Find user (REMOVED is_deleted check - using hard delete now)
         user = User.query.get(user_id)
         
-        if not user or user.is_deleted:
+        if not user:
             logger.warning(f"⚠️  User not found: {user_id}")
             return jsonify({'error': 'User not found'}), 404
         
@@ -241,7 +241,8 @@ def list_users():
             )
             return jsonify({'error': 'Admin access required'}), 403
         
-        users = User.get_active_query().all()
+        # Get all active users (REMOVED get_active_query() - just use regular query)
+        users = User.query.filter_by(is_active=True).all()
         
         logger.info(f"📋 Admin retrieved user list: {len(users)} users [Admin: {current_user.email}]")
         

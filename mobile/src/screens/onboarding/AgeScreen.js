@@ -1,13 +1,14 @@
 // mobile/src/screens/onboarding/AgeScreen.js
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
   Platform,
-  ScrollView,
-  Dimensions,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -15,125 +16,155 @@ import { useNavigation } from '@react-navigation/native';
 import { useOnboarding } from '../../context/OnBoardingContext';
 import Colors from '../../constants/colors';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const ITEM_HEIGHT = 50;
-const VISIBLE_ITEMS = 5;
-
 const AgeScreen = () => {
   const navigation = useNavigation();
   const { onboardingData, updateOnboardingData } = useOnboarding();
-  const scrollViewRef = useRef(null);
-  const [selectedAge, setSelectedAge] = useState(onboardingData.age || 25);
+  
+  // Initialize with proper formatting
+  const initialAge = onboardingData.age || 25;
+  const [age, setAge] = useState(initialAge.toString());
 
-  // Generate ages from 13 to 100
-  const ages = Array.from({ length: 88 }, (_, i) => i + 13);
+  const handleAgeChange = (text) => {
+    // Allow only numbers (no decimals)
+    const cleaned = text.replace(/[^0-9]/g, '');
+    setAge(cleaned);
+  };
 
-  useEffect(() => {
-    // Scroll to initial position after component mounts
-    const initialIndex = ages.indexOf(selectedAge);
-    if (scrollViewRef.current && initialIndex !== -1) {
-      setTimeout(() => {
-        scrollViewRef.current?.scrollTo({
-          y: initialIndex * ITEM_HEIGHT,
-          animated: false,
-        });
-      }, 100);
+  const incrementAge = (amount) => {
+    // Parse current value, default to 25 if invalid
+    let current = parseInt(age);
+    if (isNaN(current)) {
+      current = 25;
     }
-  }, []);
-
-  const handleScroll = (event) => {
-    const yOffset = event.nativeEvent.contentOffset.y;
-    const index = Math.round((yOffset + ITEM_HEIGHT / 2) / ITEM_HEIGHT);
-    const newAge = ages[index];
-    if (newAge && newAge !== selectedAge) {
-      setSelectedAge(newAge);
-    }
+    
+    // Add the amount
+    let newAge = current + amount;
+    
+    // Apply bounds: 15-100 years
+    if (newAge < 15) newAge = 15;
+    if (newAge > 100) newAge = 100;
+    
+    // Update state
+    setAge(newAge.toString());
   };
 
   const handleNext = () => {
-    updateOnboardingData('age', selectedAge);
+    // Parse the age
+    let userAge = parseInt(age);
+    
+    // If invalid, use default
+    if (isNaN(userAge)) {
+      userAge = 25;
+    }
+    
+    // Apply bounds
+    if (userAge < 15) userAge = 15;
+    if (userAge > 100) userAge = 100;
+    
+    updateOnboardingData('age', userAge);
     navigation.navigate('OnboardingHeight');
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Progress Bar */}
-      <View style={styles.progressContainer}>
-        <View style={[styles.progressBar, { width: '70%' }]} />
-      </View>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.container}>
+          {/* Progress Bar */}
+          <View style={styles.progressContainer}>
+            <View style={[styles.progressBar, { width: '70%' }]} />
+          </View>
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <FontAwesome5 name="chevron-left" size={20} color={Colors.primary} />
-        </TouchableOpacity>
-        <Text style={styles.title}>How old are you?</Text>
-        <View style={styles.backButton} />
-      </View>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <FontAwesome5 name="chevron-left" size={20} color={Colors.primary} />
+            </TouchableOpacity>
+            <Text style={styles.title}>How old are you?</Text>
+            <View style={styles.backButton} />
+          </View>
 
-      {/* Age Display */}
-      <View style={styles.displayContainer}>
-        <Text style={styles.selectedValue}>{selectedAge}</Text>
-      </View>
-
-      {/* Age Picker */}
-      <View style={styles.pickerContainer}>
-        <View style={styles.selectionIndicator} />
-        
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.scrollView}
-          contentContainerStyle={{
-            paddingTop: ITEM_HEIGHT * 2,
-            paddingBottom: ITEM_HEIGHT * 2,
-          }}
-          showsVerticalScrollIndicator={false}
-          snapToInterval={ITEM_HEIGHT}
-          decelerationRate="fast"
-          onScroll={handleScroll}
-          scrollEventThrottle={16}
-        >
-          {ages.map((age) => {
-            const isSelected = age === selectedAge;
-            return (
+          {/* Age Input */}
+          <View style={styles.inputSection}>
+            <View style={styles.inputContainer}>
               <TouchableOpacity
-                key={age}
-                style={styles.pickerItem}
-                onPress={() => {
-                  setSelectedAge(age);
-                  const index = ages.indexOf(age);
-                  scrollViewRef.current?.scrollTo({
-                    y: index * ITEM_HEIGHT,
-                    animated: true,
-                  });
-                }}
+                style={styles.adjustButton}
+                onPress={() => incrementAge(-5)}
+                activeOpacity={0.7}
               >
-                <Text
-                  style={[
-                    styles.pickerText,
-                    isSelected && styles.pickerTextSelected,
-                  ]}
-                >
-                  {age}
-                </Text>
+                <FontAwesome5 name="minus" size={20} color={Colors.primary} />
               </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
 
-      {/* Next Button */}
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.nextButton}
-          onPress={handleNext}
-        >
-          <Text style={styles.nextButtonText}>Next</Text>
-        </TouchableOpacity>
-      </View>
+              <View style={styles.ageInputWrapper}>
+                <TextInput
+                  style={styles.ageInput}
+                  value={age}
+                  onChangeText={handleAgeChange}
+                  keyboardType="number-pad"
+                  maxLength={3}
+                  selectTextOnFocus
+                />
+                <Text style={styles.unitText}>years</Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.adjustButton}
+                onPress={() => incrementAge(5)}
+                activeOpacity={0.7}
+              >
+                <FontAwesome5 name="plus" size={20} color={Colors.primary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Quick adjustment buttons */}
+            <View style={styles.quickAdjustContainer}>
+              <TouchableOpacity
+                style={styles.quickButton}
+                onPress={() => incrementAge(-5)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.quickButtonText}>-5</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.quickButton}
+                onPress={() => incrementAge(-1)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.quickButtonText}>-1</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.quickButton}
+                onPress={() => incrementAge(1)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.quickButtonText}>+1</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.quickButton}
+                onPress={() => incrementAge(5)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.quickButtonText}>+5</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.rangeText}>Range: 15-100 years</Text>
+          </View>
+
+          {/* Next Button */}
+          <View style={styles.footer}>
+            <TouchableOpacity
+              style={styles.nextButton}
+              onPress={handleNext}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.nextButtonText}>Next</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
     </SafeAreaView>
   );
 };
@@ -176,52 +207,77 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     flex: 1,
   },
-  displayContainer: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  selectedValue: {
-    fontSize: 80,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  pickerContainer: {
+  inputSection: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'relative',
+    paddingHorizontal: 20,
   },
-  selectionIndicator: {
-    position: 'absolute',
-    width: '80%',
-    height: ITEM_HEIGHT,
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    zIndex: -1,
-    top: '50%',
-    marginTop: -ITEM_HEIGHT / 2,
-  },
-  scrollView: {
-    width: '100%',
-  },
-  scrollContent: {
+  inputContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 20,
+    marginBottom: 30,
   },
-  pickerItem: {
-    height: ITEM_HEIGHT,
+  adjustButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#FFF',
     justifyContent: 'center',
     alignItems: 'center',
-    width: '100%',
+    borderWidth: 2,
+    borderColor: Colors.primary,
   },
-  pickerText: {
-    fontSize: 24,
-    color: Colors.textSecondary,
-    fontWeight: '500',
+  ageInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    minWidth: 200,
   },
-  pickerTextSelected: {
-    fontSize: 28,
-    color: '#000',
+  ageInput: {
+    fontSize: 44,
     fontWeight: 'bold',
+    color: '#000',
+    textAlign: 'center',
+    flex: 1,
+    padding: 0,
+    minWidth: 50,
+  },
+  unitText: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+    marginLeft: 8,
+  },
+  quickAdjustContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  quickButton: {
+    backgroundColor: '#FFF',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  quickButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  rangeText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
   },
   footer: {
     padding: 20,

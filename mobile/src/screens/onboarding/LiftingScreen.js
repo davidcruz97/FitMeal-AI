@@ -18,19 +18,19 @@ const LIFTING_LEVELS = [
     id: 'beginner',
     label: 'Beginner',
     description: "I'm new to bodybuilding",
-    icon: 'dumbbell',
+    icon: 'running',
   },
   {
     id: 'intermediate',
     label: 'Intermediate',
     description: "I've lifted weights before",
-    icon: 'running',
+    icon: 'medal',
   },
   {
     id: 'advanced',
     label: 'Advanced',
     description: "I've been lifting for years",
-    icon: 'medal',
+    icon: 'dumbbell',
   },
 ];
 

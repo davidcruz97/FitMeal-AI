@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -20,6 +21,7 @@ const AuthScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const { login, register } = useAuth();
@@ -33,6 +35,12 @@ const AuthScreen = () => {
 
     if (!isLogin && !fullName) {
       Alert.alert('Error', 'Please enter your full name');
+      return;
+    }
+
+    // Check terms acceptance for registration
+    if (!isLogin && !acceptedTerms) {
+      Alert.alert('Error', 'Please accept the Terms and Conditions to register');
       return;
     }
 
@@ -66,6 +74,15 @@ const AuthScreen = () => {
     setEmail('');
     setPassword('');
     setFullName('');
+    setAcceptedTerms(false);
+  };
+
+  const openTermsAndConditions = () => {
+    // Replace this URL with your actual Terms and Conditions page
+    const termsUrl = 'https://fitmeal.cinturillas247.com/terms';
+    Linking.openURL(termsUrl).catch((err) => 
+      Alert.alert('Error', 'Unable to open Terms and Conditions')
+    );
   };
 
   return (
@@ -86,73 +103,96 @@ const AuthScreen = () => {
             </Text>
           </View>
 
-        <View style={styles.form}>
-          {!isLogin && (
+          <View style={styles.form}>
+            {!isLogin && (
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Full Name</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your full name"
+                  value={fullName}
+                  onChangeText={setFullName}
+                  autoCapitalize="words"
+                  editable={!loading}
+                />
+              </View>
+            )}
+
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Full Name</Text>
+              <Text style={styles.label}>Email</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Enter your full name"
-                value={fullName}
-                onChangeText={setFullName}
-                autoCapitalize="words"
+                placeholder="Enter your email"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
                 editable={!loading}
               />
             </View>
-          )}
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your email"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              editable={!loading}
-            />
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Password</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                autoCapitalize="none"
+                editable={!loading}
+              />
+            </View>
+
+            {/* Terms and Conditions Checkbox - Only for Registration */}
+            {!isLogin && (
+              <View style={styles.termsContainer}>
+                <TouchableOpacity
+                  style={styles.checkbox}
+                  onPress={() => setAcceptedTerms(!acceptedTerms)}
+                  disabled={loading}
+                >
+                  <View style={[styles.checkboxBox, acceptedTerms && styles.checkboxChecked]}>
+                    {acceptedTerms && (
+                      <FontAwesome5 name="check" size={14} color="#FFF" />
+                    )}
+                  </View>
+                  <View style={styles.termsTextContainer}>
+                    <Text style={styles.termsText}>I accept the </Text>
+                    <TouchableOpacity onPress={openTermsAndConditions}>
+                      <Text style={styles.termsLink}>Terms and Conditions</Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleSubmit}
+              disabled={loading}
+            >
+              <Text style={styles.buttonText}>
+                {loading ? 'Please wait...' : isLogin ? 'Login' : 'Register'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.toggleButton}
+              onPress={toggleMode}
+              disabled={loading}
+            >
+              <Text style={styles.toggleText}>
+                {isLogin
+                  ? "Don't have an account? Register"
+                  : 'Already have an account? Login'}
+              </Text>
+            </TouchableOpacity>
           </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-              editable={!loading}
-            />
-          </View>
-
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleSubmit}
-            disabled={loading}
-          >
-            <Text style={styles.buttonText}>
-              {loading ? 'Please wait...' : isLogin ? 'Login' : 'Register'}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.toggleButton}
-            onPress={toggleMode}
-            disabled={loading}
-          >
-            <Text style={styles.toggleText}>
-              {isLogin
-                ? "Don't have an account? Register"
-                : 'Already have an account? Login'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
-  </SafeAreaView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
@@ -206,6 +246,44 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: 1,
     borderColor: Colors.border,
+  },
+  termsContainer: {
+    marginBottom: 20,
+  },
+  checkbox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  checkboxBox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  checkboxChecked: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  termsTextContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    flex: 1,
+    alignItems: 'center',
+  },
+  termsText: {
+    fontSize: 14,
+    color: Colors.text,
+  },
+  termsLink: {
+    fontSize: 14,
+    color: Colors.primary,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   button: {
     backgroundColor: Colors.primary,

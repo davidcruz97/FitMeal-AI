@@ -126,6 +126,14 @@ def create_app(config_name=None):
             
         except Exception as e:
             app.logger.warning(f"Could not register admin blueprints: {e}")
+            
+        # Legal pages (Terms, Privacy)
+        try:
+            from app.legal import routes as legal_routes
+            app.register_blueprint(legal_routes.bp)
+            
+        except Exception as e:
+            app.logger.warning(f"Could not register legal blueprints: {e}")
         
         # Register error handlers
         register_error_handlers(app)

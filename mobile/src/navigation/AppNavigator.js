@@ -99,7 +99,7 @@ const MainTabs = () => {
           tabBarIcon: ({ color, size }) => (
             <FontAwesome5 name="robot" size={20} color={color} solid />
           ),
-          title: 'AI-Buddy',
+          title: 'AI-Assistant',
         }}
       />
       <Tab.Screen

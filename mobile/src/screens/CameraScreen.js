@@ -118,7 +118,7 @@ const CameraScreen = () => {
             <FontAwesome5 name="camera" size={60} color={Colors.primary} />
             <Text style={styles.emptyTitle}>Take a Photo</Text>
             <Text style={styles.emptySubtitle}>
-              Capture your ingredients and let AI detect them
+              Capture your ingredients and let AI detect them and help choosing your healthy meal!
             </Text>
           </View>
 

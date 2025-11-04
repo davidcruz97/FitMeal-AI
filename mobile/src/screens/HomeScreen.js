@@ -126,7 +126,7 @@ const HomeScreen = () => {
           onPress={() => navigation.navigate('AI')}
         >
           <FontAwesome5 name="robot" size={32} color={Colors.primary} solid />
-          <Text style={styles.actionLabel}>Ask AI</Text>
+          <Text style={styles.actionLabel}>Ask the AI-Assitant</Text>
         </TouchableOpacity>
       </View>
 

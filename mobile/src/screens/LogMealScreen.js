@@ -10,12 +10,16 @@ import {
   Platform,
   TextInput,
   ActivityIndicator,
+  Modal,
+  KeyboardAvoidingView,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { logMeal } from '../api/meals';
-import { getIngredientById } from '../api/ingredients';
+import { getIngredientById, searchIngredients } from '../api/ingredients';
 import Colors from '../constants/colors';
 
 const MEAL_TYPES = [
@@ -40,6 +44,12 @@ const LogMealScreen = ({ route }) => {
     fats: 0,
   });
 
+  // Modal states for adding ingredients
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+
   // Load ingredient details with nutritional info
   useEffect(() => {
     loadIngredientDetails();
@@ -60,19 +70,16 @@ const LogMealScreen = ({ route }) => {
           try {
             console.log('Processing ingredient:', JSON.stringify(ing, null, 2));
             
-            // Try to get ingredient_id from different possible fields
             const ingredientId = ing.ingredient_id || ing.id;
             
             if (!ingredientId) {
               console.warn('No ingredient_id found for ingredient:', ing);
-              // Use recipe ingredient data as-is
               return {
                 name: ing.name || 'Unknown',
                 quantity: parseFloat(ing.quantity) || 100,
                 unit: ing.unit || 'g',
                 enabled: true,
                 currentQuantity: parseFloat(ing.quantity) || 100,
-                // Use nutritional data if available in ingredient object
                 calories_per_100g: ing.calories_per_100g || 0,
                 protein_per_100g: ing.protein_per_100g || 0,
                 carbs_per_100g: ing.carbs_per_100g || 0,
@@ -80,7 +87,6 @@ const LogMealScreen = ({ route }) => {
               };
             }
 
-            // Fetch full ingredient details including nutritional info
             console.log(`Fetching ingredient details for ID: ${ingredientId}`);
             const result = await getIngredientById(ingredientId);
             const ingredientData = result.ingredient;
@@ -88,20 +94,19 @@ const LogMealScreen = ({ route }) => {
             return {
               ingredient_id: ingredientId,
               name: ing.name || ingredientData.name,
-              quantity: parseFloat(ing.quantity) || 1,  // Display quantity
-              unit: ing.unit || 'g',  // Display unit
-              quantity_grams: parseFloat(ing.quantity_grams) || 100,  // For calculations
+              quantity: parseFloat(ing.quantity) || 1,
+              unit: ing.unit || 'g',
+              quantity_grams: parseFloat(ing.quantity_grams) || 100,
               enabled: true,
-              currentQuantity: parseFloat(ing.quantity_grams) || 100,  // Use grams for calculation
-              // Nutritional data per 100g
+              currentQuantity: parseFloat(ing.quantity_grams) || 100,
               calories_per_100g: ingredientData.nutritional_info?.calories_per_100g || 0,
               protein_per_100g: ingredientData.nutritional_info?.protein_per_100g || 0,
               carbs_per_100g: ingredientData.nutritional_info?.carbs_per_100g || 0,
               fats_per_100g: ingredientData.nutritional_info?.fats_per_100g || 0,
+              isFromRecipe: true, // Mark original recipe ingredients
             };
           } catch (error) {
             console.error(`Error loading ingredient:`, error);
-            // Return ingredient with available data
             return {
               name: ing.name || 'Unknown',
               quantity: parseFloat(ing.quantity) || 100,
@@ -112,6 +117,7 @@ const LogMealScreen = ({ route }) => {
               protein_per_100g: ing.protein_per_100g || 0,
               carbs_per_100g: ing.carbs_per_100g || 0,
               fats_per_100g: ing.fats_per_100g || 0,
+              isFromRecipe: true,
             };
           }
         })
@@ -142,7 +148,7 @@ const LogMealScreen = ({ route }) => {
 
     ingredients.forEach((ing) => {
       if (ing.enabled && ing.currentQuantity > 0) {
-        const factor = ing.currentQuantity / 100; // Nutritional info is per 100g
+        const factor = ing.currentQuantity / 100;
         totalCalories += (ing.calories_per_100g || 0) * factor;
         totalProtein += (ing.protein_per_100g || 0) * factor;
         totalCarbs += (ing.carbs_per_100g || 0) * factor;
@@ -176,19 +182,95 @@ const LogMealScreen = ({ route }) => {
     const updatedIngredients = [...ingredients];
     const ingredient = updatedIngredients[index];
     
-    // Update display quantity
     ingredient.quantity = newDisplayQuantity;
     
-    // Calculate new quantity_grams based on proportion
-    const originalQuantity = parseFloat(recipe.ingredients[index].quantity);
-    const originalGrams = parseFloat(recipe.ingredients[index].quantity_grams);
-    ingredient.currentQuantity = (newDisplayQuantity / originalQuantity) * originalGrams;
+    // For recipe ingredients, calculate based on proportion
+    if (ingredient.isFromRecipe && recipe.ingredients[index]) {
+      const originalQuantity = parseFloat(recipe.ingredients[index].quantity);
+      const originalGrams = parseFloat(recipe.ingredients[index].quantity_grams);
+      ingredient.currentQuantity = (newDisplayQuantity / originalQuantity) * originalGrams;
+    } else {
+      // For manually added ingredients, use the value directly as grams
+      ingredient.currentQuantity = newDisplayQuantity;
+    }
     
     setIngredients(updatedIngredients);
   };
 
+  const removeIngredient = (index) => {
+    Alert.alert(
+      'Remove Ingredient',
+      `Remove ${ingredients[index].name}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => {
+            const updatedIngredients = ingredients.filter((_, i) => i !== index);
+            setIngredients(updatedIngredients);
+          },
+        },
+      ]
+    );
+  };
+
+  // Search ingredients
+  const handleSearch = async (query) => {
+    setSearchQuery(query);
+    
+    if (query.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearching(true);
+    try {
+      const result = await searchIngredients(query, 10);
+      setSearchResults(result.ingredients || []);
+    } catch (error) {
+      console.error('Search error:', error);
+      Alert.alert('Error', 'Failed to search ingredients');
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  // Add ingredient from search
+  const addIngredient = async (ingredientData) => {
+    try {
+      // Get full ingredient details
+      const result = await getIngredientById(ingredientData.id);
+      const fullIngredient = result.ingredient;
+
+      const newIngredient = {
+        ingredient_id: fullIngredient.id,
+        name: fullIngredient.name,
+        quantity: 100, // Default 100g
+        unit: 'g',
+        quantity_grams: 100,
+        enabled: true,
+        currentQuantity: 100,
+        calories_per_100g: fullIngredient.nutritional_info?.calories_per_100g || 0,
+        protein_per_100g: fullIngredient.nutritional_info?.protein_per_100g || 0,
+        carbs_per_100g: fullIngredient.nutritional_info?.carbs_per_100g || 0,
+        fats_per_100g: fullIngredient.nutritional_info?.fats_per_100g || 0,
+        isFromRecipe: false, // Mark as manually added
+      };
+
+      setIngredients([...ingredients, newIngredient]);
+      setShowAddModal(false);
+      setSearchQuery('');
+      setSearchResults([]);
+      
+      Alert.alert('Success', `${fullIngredient.name} added!`);
+    } catch (error) {
+      console.error('Error adding ingredient:', error);
+      Alert.alert('Error', 'Failed to add ingredient');
+    }
+  };
+
   const handleLogMeal = async () => {
-    // Check if at least one ingredient is selected
     const hasEnabledIngredients = ingredients.some((ing) => ing.enabled && ing.currentQuantity > 0);
     
     if (!hasEnabledIngredients) {
@@ -199,8 +281,22 @@ const LogMealScreen = ({ route }) => {
     setLoading(true);
 
     try {
-      // For now, we'll use servings = 1 since we're tracking by ingredients
-      await logMeal(recipe.id, mealType, 1);
+      const customIngredients = ingredients
+        .filter((ing) => ing.enabled && ing.currentQuantity > 0)
+        .map((ing) => ({
+          ingredient_id: ing.ingredient_id,
+          name: ing.name,
+          quantity_grams: ing.currentQuantity,
+          calories_per_100g: ing.calories_per_100g,
+          protein_per_100g: ing.protein_per_100g,
+          carbs_per_100g: ing.carbs_per_100g,
+          fats_per_100g: ing.fats_per_100g,
+        }));
+
+      console.log('Sending custom ingredients:', customIngredients);
+      console.log('Calculated macros to match:', calculatedMacros);
+
+      await logMeal(recipe.id, mealType, 1, '', null, customIngredients);
       
       Alert.alert(
         'Success',
@@ -271,52 +367,70 @@ const LogMealScreen = ({ route }) => {
         </View>
 
         {/* Ingredients Selection */}
-        {ingredients.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Adjust Ingredients</Text>
-            <Text style={styles.sectionSubtitle}>
-              Select and adjust quantities of ingredients you used
-            </Text>
-            
-            {ingredients.map((ingredient, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.ingredientCard,
-                  !ingredient.enabled && styles.ingredientCardDisabled,
-                ]}
-              >
-                <TouchableOpacity
-                  style={styles.ingredientHeader}
-                  onPress={() => toggleIngredient(index)}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.checkbox, ingredient.enabled && styles.checkboxActive]}>
-                    {ingredient.enabled && (
-                      <FontAwesome5 name="check" size={12} color={Colors.textLight} />
-                    )}
-                  </View>
-                  <Text style={[styles.ingredientName, !ingredient.enabled && styles.textDisabled]}>
-                    {ingredient.name}
-                  </Text>
-                </TouchableOpacity>
-                
-                {ingredient.enabled && (
-                  <View style={styles.quantityControl}>
-                    <TextInput
-                      style={styles.quantityInput}
-                      value={ingredient.quantity.toString()}
-                      onChangeText={(value) => updateQuantity(index, value)}
-                      keyboardType="numeric"
-                      selectTextOnFocus
-                    />
-                    <Text style={styles.quantityUnit}>{ingredient.unit}</Text>
-                  </View>
-                )}
-              </View>
-            ))}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={styles.sectionTitle}>Adjust Ingredients</Text>
+              <Text style={styles.sectionSubtitle}>
+                Select and adjust quantities
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => setShowAddModal(true)}
+            >
+              <FontAwesome5 name="plus" size={16} color={Colors.textLight} />
+              <Text style={styles.addButtonText}>Add</Text>
+            </TouchableOpacity>
           </View>
-        )}
+          
+          {ingredients.map((ingredient, index) => (
+            <View
+              key={index}
+              style={[
+                styles.ingredientCard,
+                !ingredient.enabled && styles.ingredientCardDisabled,
+              ]}
+            >
+              <TouchableOpacity
+                style={styles.ingredientHeader}
+                onPress={() => toggleIngredient(index)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.checkbox, ingredient.enabled && styles.checkboxActive]}>
+                  {ingredient.enabled && (
+                    <FontAwesome5 name="check" size={12} color={Colors.textLight} />
+                  )}
+                </View>
+                <Text style={[styles.ingredientName, !ingredient.enabled && styles.textDisabled]}>
+                  {ingredient.name}
+                  {!ingredient.isFromRecipe && <Text style={styles.addedBadge}> • Added</Text>}
+                </Text>
+                {!ingredient.isFromRecipe && (
+                  <TouchableOpacity
+                    style={styles.removeButton}
+                    onPress={() => removeIngredient(index)}
+                  >
+                    <FontAwesome5 name="trash" size={14} color={Colors.error} />
+                  </TouchableOpacity>
+                )}
+              </TouchableOpacity>
+              
+              {ingredient.enabled && (
+                <View style={styles.quantityControl}>
+                  <TextInput
+                    style={styles.quantityInput}
+                    value={ingredient.quantity.toString()}
+                    onChangeText={(value) => updateQuantity(index, value)}
+                    keyboardType="numeric"
+                    selectTextOnFocus
+                  />
+                  <Text style={styles.quantityUnit}>{ingredient.unit}</Text>
+                </View>
+              )}
+            </View>
+          ))}
+        </View>
 
         {/* Calculated Nutritional Info */}
         <View style={styles.section}>
@@ -363,6 +477,95 @@ const LogMealScreen = ({ route }) => {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Add Ingredient Modal */}
+      <Modal
+        visible={showAddModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowAddModal(false)}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+              <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.modalKeyboardAvoid}
+              >
+                <View style={styles.modalContent}>
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Add Ingredient</Text>
+                    <TouchableOpacity onPress={() => {
+                      Keyboard.dismiss();
+                      setShowAddModal(false);
+                      setSearchQuery('');
+                      setSearchResults([]);
+                    }}>
+                      <FontAwesome5 name="times" size={24} color={Colors.text} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.searchContainer}>
+                    <FontAwesome5 name="search" size={16} color={Colors.textSecondary} />
+                    <TextInput
+                      style={styles.searchInput}
+                      placeholder="Search ingredients..."
+                      placeholderTextColor={Colors.textSecondary}
+                      value={searchQuery}
+                      onChangeText={handleSearch}
+                      autoFocus
+                      returnKeyType="search"
+                    />
+                    {searchQuery.length > 0 && (
+                      <TouchableOpacity onPress={() => {
+                        setSearchQuery('');
+                        setSearchResults([]);
+                      }}>
+                        <FontAwesome5 name="times-circle" size={16} color={Colors.textSecondary} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  <ScrollView 
+                    style={styles.searchResults}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={true}
+                  >
+                    {searching ? (
+                      <View style={styles.centerContent}>
+                        <ActivityIndicator size="small" color={Colors.primary} />
+                      </View>
+                    ) : searchResults.length > 0 ? (
+                      searchResults.map((item) => (
+                        <TouchableOpacity
+                          key={item.id}
+                          style={styles.searchResultItem}
+                          onPress={() => {
+                            Keyboard.dismiss();
+                            addIngredient(item);
+                          }}
+                        >
+                          <View style={styles.searchResultContent}>
+                            <Text style={styles.searchResultName}>{item.name}</Text>
+                            {item.category && (
+                              <Text style={styles.searchResultCategory}>{item.category}</Text>
+                            )}
+                          </View>
+                          <FontAwesome5 name="plus-circle" size={20} color={Colors.primary} />
+                        </TouchableOpacity>
+                      ))
+                    ) : searchQuery.length >= 2 ? (
+                      <Text style={styles.noResults}>No ingredients found</Text>
+                    ) : (
+                      <Text style={styles.searchHint}>Type at least 2 characters to search</Text>
+                    )}
+                  </ScrollView>
+                </View>
+              </KeyboardAvoidingView>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -406,6 +609,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -425,7 +634,20 @@ const styles = StyleSheet.create({
   sectionSubtitle: {
     fontSize: 14,
     color: Colors.textSecondary,
-    marginBottom: 16,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  addButtonText: {
+    color: Colors.textLight,
+    fontWeight: '600',
+    fontSize: 14,
   },
   mealTypesGrid: {
     flexDirection: 'row',
@@ -494,6 +716,14 @@ const styles = StyleSheet.create({
   },
   textDisabled: {
     color: Colors.textSecondary,
+  },
+  addedBadge: {
+    fontSize: 12,
+    color: Colors.primary,
+    fontWeight: 'normal',
+  },
+  removeButton: {
+    padding: 8,
   },
   quantityControl: {
     flexDirection: 'row',
@@ -586,6 +816,97 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalKeyboardAvoid: {
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+    maxHeight: '85%',
+    minHeight: '50%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: Colors.text,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    gap: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: Colors.text,
+    padding: 0,
+  },
+  searchResults: {
+    flex: 1,
+  },
+  centerContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    backgroundColor: Colors.background,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  searchResultContent: {
+    flex: 1,
+  },
+  searchResultName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  searchResultCategory: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    textTransform: 'capitalize',
+  },
+  noResults: {
+    textAlign: 'center',
+    color: Colors.textSecondary,
+    paddingVertical: 40,
+    fontSize: 14,
+  },
+  searchHint: {
+    textAlign: 'center',
+    color: Colors.textSecondary,
+    paddingVertical: 40,
+    fontSize: 14,
   },
 });
 

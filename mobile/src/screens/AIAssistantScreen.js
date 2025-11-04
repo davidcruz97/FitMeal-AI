@@ -394,7 +394,7 @@ const AIAssistantScreen = () => {
         <>
           {/* Header with Tab Selector */}
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>AI Assistant</Text>
+            <Text style={styles.headerTitle}>Ale needs up to 30s to think</Text>
             
             <View style={styles.tabSelector}>
               <TouchableOpacity

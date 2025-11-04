@@ -10,7 +10,6 @@ from sqlalchemy import func
 
 bp = Blueprint('api_meals', __name__)
 
-
 @bp.route('/log', methods=['POST'])
 @jwt_required()
 @limiter.limit("100 per hour")
@@ -24,7 +23,18 @@ def log_meal():
         "meal_type": "lunch",
         "servings_consumed": 1.5,
         "notes": "Delicious!",
-        "scan_id": 5  (optional)
+        "scan_id": 5,  (optional)
+        "custom_ingredients": [  (optional - for custom quantities)
+            {
+                "ingredient_id": 2,
+                "name": "Whole Egg",
+                "quantity_grams": 50.3,
+                "calories_per_100g": 148,
+                "protein_per_100g": 12.4,
+                "carbs_per_100g": 0.9,
+                "fats_per_100g": 9.9
+            }
+        ]
     }
     """
     logger = current_app.logger
@@ -42,10 +52,11 @@ def log_meal():
         servings_consumed = float(data.get('servings_consumed', 1.0))
         notes = data.get('notes', '').strip()
         scan_id = data.get('scan_id')
+        custom_ingredients = data.get('custom_ingredients') 
         
         logger.info(
             f"🍽️  Logging meal: Recipe {recipe_id} | Type: {meal_type} | "
-            f"Servings: {servings_consumed} [User: {user_id}]"
+            f"Servings: {servings_consumed} | Custom: {bool(custom_ingredients)} [User: {user_id}]"
         )
         
         # Validate meal_type
@@ -64,15 +75,50 @@ def log_meal():
             )
             return jsonify({'error': 'Recipe not found'}), 404
         
-        # Calculate nutritional values for the consumed servings
-        macros = recipe.calculate_macros(servings=servings_consumed)
-        
-        logger.debug(
-            f"📊 Calculated macros: {macros['total']['calories']:.1f} kcal | "
-            f"P: {macros['total']['protein']:.1f}g | "
-            f"C: {macros['total']['carbs']:.1f}g | "
-            f"F: {macros['total']['fats']:.1f}g"
-        )
+        # Calculate nutritional values
+        if custom_ingredients:
+            # Use custom ingredients for calculation
+            logger.debug(f"📊 Calculating macros from {len(custom_ingredients)} custom ingredients")
+            
+            total_calories = 0
+            total_protein = 0
+            total_carbs = 0
+            total_fats = 0
+            
+            for ing in custom_ingredients:
+                quantity_grams = float(ing.get('quantity_grams', 0))
+                if quantity_grams > 0:
+                    multiplier = quantity_grams / 100.0
+                    total_calories += float(ing.get('calories_per_100g', 0)) * multiplier
+                    total_protein += float(ing.get('protein_per_100g', 0)) * multiplier
+                    total_carbs += float(ing.get('carbs_per_100g', 0)) * multiplier
+                    total_fats += float(ing.get('fats_per_100g', 0)) * multiplier
+            
+            macros = {
+                'total': {
+                    'calories': round(total_calories, 1),
+                    'protein': round(total_protein, 1),
+                    'carbs': round(total_carbs, 1),
+                    'fats': round(total_fats, 1)
+                }
+            }
+            
+            logger.debug(
+                f"📊 Custom macros calculated: {macros['total']['calories']:.1f} kcal | "
+                f"P: {macros['total']['protein']:.1f}g | "
+                f"C: {macros['total']['carbs']:.1f}g | "
+                f"F: {macros['total']['fats']:.1f}g"
+            )
+        else:
+            # Use recipe's default ingredients
+            macros = recipe.calculate_macros(servings=servings_consumed)
+            
+            logger.debug(
+                f"📊 Recipe macros calculated: {macros['total']['calories']:.1f} kcal | "
+                f"P: {macros['total']['protein']:.1f}g | "
+                f"C: {macros['total']['carbs']:.1f}g | "
+                f"F: {macros['total']['fats']:.1f}g"
+            )
         
         # Get consumed_at from request or use current time
         consumed_at_str = data.get('consumed_at')
@@ -106,7 +152,8 @@ def log_meal():
         
         logger.info(
             f"✅ Meal logged successfully: {recipe.name} ({meal_type}) | "
-            f"ID: {meal_log.id} | {macros['total']['calories']:.0f} kcal [User: {user_id}]"
+            f"ID: {meal_log.id} | {macros['total']['calories']:.0f} kcal "
+            f"{'[CUSTOM]' if custom_ingredients else '[DEFAULT]'} [User: {user_id}]"
         )
         
         return jsonify({
@@ -118,7 +165,6 @@ def log_meal():
         db.session.rollback()
         logger.error(f"❌ Failed to log meal for user {user_id}: {e}", exc_info=True)
         return jsonify({'error': f'Failed to log meal: {str(e)}'}), 500
-
 
 @bp.route('/history', methods=['GET'])
 @jwt_required()

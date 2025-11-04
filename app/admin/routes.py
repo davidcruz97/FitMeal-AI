@@ -92,7 +92,7 @@ def dashboard():
     total_recipes = Recipe.query.count()
     published_recipes = Recipe.query.filter_by(is_published=True).count()
     total_ingredients = Ingredient.query.count()
-    total_users = User.query.filter_by(is_deleted=False).count()
+    total_users = User.query.count()
     
     # Scan statistics (using created_at, not scan_date)
     from app.models.meal_scan import MealScan
@@ -109,25 +109,20 @@ def dashboard():
     
     # User statistics
     users_today = User.query.filter(
-        func.date(User.created_at) == today,
-        User.is_deleted == False
+        func.date(User.created_at) == today
     ).count()
     users_week = User.query.filter(
-        User.created_at >= week_ago,
-        User.is_deleted == False
+        User.created_at >= week_ago
     ).count()
     active_users = User.query.filter(
-        User.is_active == True,
-        User.is_deleted == False
+        User.is_active == True
     ).count()
     
     # Recipe-Ingredient links count
     total_recipe_ingredients = RecipeIngredient.query.count()
     
     # Recent users
-    recent_users = User.query.filter_by(
-        is_deleted=False
-    ).order_by(
+    recent_users = User.query.order_by(
         User.created_at.desc()
     ).limit(5).all()
     
@@ -283,26 +278,26 @@ def user_toggle_role(user_id):
 @bp.route('/users/<int:user_id>/delete', methods=['POST'])
 @admin_required
 def user_delete(user_id):
-    """Soft delete user"""
+    """Delete user permanently (hard delete)"""
     logger = current_app.logger
     from flask import session
     
     try:
         user = User.query.get_or_404(user_id)
         
-        if user.is_admin:
+        if user.is_admin():
             flash('Cannot delete admin users', 'error')
             return redirect(url_for('admin.users'))
         
-        # Soft delete
-        user.is_deleted = True
-        user.deleted_at = datetime.utcnow()
-        user.is_active = False
+        user_name = user.full_name
+        user_email = user.email
         
+        # Hard delete
+        db.session.delete(user)
         db.session.commit()
         
-        logger.info(f"🗑️ User soft deleted: {user.email} by admin {session['user_email']}")
-        flash(f'User "{user.full_name}" deleted successfully', 'success')
+        logger.info(f"🗑️ User deleted permanently: {user_email} by admin {session['user_email']}")
+        flash(f'User "{user_name}" deleted successfully', 'success')
         
     except Exception as e:
         db.session.rollback()

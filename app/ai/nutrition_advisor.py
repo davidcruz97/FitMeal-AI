@@ -51,20 +51,22 @@ class NutritionAdvisor:
                 )
                 context = f"\nUser context:\n{context}\n{safety_instructions}\n"
             
-            prompt = f"""You are a professional nutritionist. Answer this question clearly and accurately:{context}
-Question: {question}
-
-Provide:
-1. Direct answer
-2. Scientific reasoning (brief)
-3. Practical application
-4. Any relevant warnings or considerations
-
-Keep it evidence-based and practical."""
+            prompt = f"""SYSTEM: You are Ale, an AI nutrition assistant having a casual conversation:
+            
+            USER INFO:
+            The user's name is {user_profile.full_name.split()[0] if user_profile and user_profile.full_name else "there"}.
+            {context}
+            
+            The user just said: "{question}"
+            
+            RESPONSE GUIDELINES:
+            1. Respond as Ale naturally in 1-2 short paragraphs (max 100 words). 
+            2. Be conversational, warm, and direct. No headers, no bullet points, just friendly advice. 
+            3. Answer their question directly. No role-playing, no made-up personas, just helpful nutrition advice."""
             
             logger.info(f"💬 Answering nutrition question (personalized={bool(context)})")
-            logger.debug(f"📝 Question: {question[:100]}...")
             logger.debug(f"📝 Prompt length: {len(prompt)} chars")
+            logger.debug(f"📝 Prompt: {prompt}")
             
             # Get LLM with factual temperature
             llm = self.llm_manager.get_llm(temperature=0.3)
@@ -214,14 +216,14 @@ Focus on performance and recovery."""
             Explanation as string
         """
         try:
-            prompt = f"""Explain {macro_name} in 3-4 short paragraphs (max 500 words).
+            prompt = f"""Explain {macro_name} in 1-2 short paragraphs (max 100 words).
 
     Include:
-    1. What it is and why it matters (1 paragraph)
-    2. Best food sources (1 paragraph)  
-    3. Daily needs and tips (1 paragraph)
+    1. What it is and why it matters
+    2. Best food sources
+    3. Quick tips for daily intake
 
-    Be concise, friendly, and practical. No lists, just flowing paragraphs."""
+    Keep it simple and practical."""
             
             logger.info(f"📚 Explaining macro: {macro_name}")
             
@@ -330,14 +332,6 @@ Focus on performance and recovery."""
     def _add_safety_disclaimers(self, response, allergen_names, medical_conditions):
         """Add appropriate safety disclaimers to response"""
         disclaimers = []
-        
-        # Add allergy warning if applicable
-        if allergen_names:
-            disclaimers.append(self.safety.get_allergy_warning(allergen_names))
-        
-        # Add medical warnings if applicable
-        if medical_conditions:
-            disclaimers.append(self.safety.get_medical_warnings(medical_conditions))
         
         # Always add general disclaimer
         disclaimers.append(self.safety.get_disclaimer())

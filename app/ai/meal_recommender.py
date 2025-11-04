@@ -60,7 +60,7 @@ For each meal, provide:
 3. Approximate macros (calories, protein, carbs, fats)
 4. Why it's good for their goals
 
-Keep it practical, realistic, and aligned with their targets."""
+Keep it practical, realistic, and aligned with their targets. Max 200 words total."""
             
             logger.info(f"🍽️ Generating meal recommendations (meal_type={meal_type}, ingredients={len(available_ingredients) if available_ingredients else 0})")
             logger.debug(f"📝 Prompt length: {len(prompt)} chars, Allergies: {allergen_names}")

@@ -13,8 +13,8 @@ class NutritionSafety:
     # General AI disclaimer
     GENERAL_DISCLAIMER = """
 
-⚠️ **Important Disclaimer:**
-This advice is AI-generated and for informational purposes only. Always consult with a licensed healthcare professional or registered dietitian before making significant dietary changes, especially if you have medical conditions or are taking medications.
+⚠️ Important Disclaimer:
+This advice is AI-generated and for informational purposes only. It does NOT replace professional medical or nutritional guidance.
 """
     
     # Medical condition-specific warnings
@@ -85,19 +85,6 @@ This advice is AI-generated and for informational purposes only. Always consult 
         )
     }
     
-    # Allergy severity levels
-    ALLERGY_WARNING = """
-⚠️ **CRITICAL - FOOD ALLERGIES DETECTED:**
-AVOID the following ingredients completely: {allergen_list}
-
-Always:
-- Read all food labels carefully
-- Ask about ingredients when eating out
-- Be aware of cross-contamination risks
-- Carry emergency medication if prescribed
-- Inform others about your allergies
-"""
-    
     @staticmethod
     def get_disclaimer(include_general=True):
         """
@@ -141,27 +128,6 @@ Always:
             return "\n\n" + "\n\n".join(warnings)
         
         return ""
-    
-    @staticmethod
-    def get_allergy_warning(allergen_names):
-        """
-        Get critical allergy warning
-        
-        Args:
-            allergen_names: List of allergen ingredient names
-        
-        Returns:
-            str: Allergy warning text
-        """
-        if not allergen_names:
-            return ""
-        
-        allergen_list = ", ".join(allergen_names).upper()
-        logger.warning(f"⚠️ ALLERGY WARNING: {allergen_list}")
-        
-        return "\n\n" + NutritionSafety.ALLERGY_WARNING.format(
-            allergen_list=allergen_list
-        )
     
     @staticmethod
     def build_prompt_safety_instructions(allergen_names, medical_conditions):

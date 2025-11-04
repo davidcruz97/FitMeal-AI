@@ -270,10 +270,6 @@ Provide 3-5 practical modifications."""
         """Add appropriate safety disclaimers to response"""
         disclaimers = []
         
-        # Add allergy warning if applicable
-        if allergen_names:
-            disclaimers.append(self.safety.get_allergy_warning(allergen_names))
-        
         # Add medical warnings if applicable
         if medical_conditions:
             disclaimers.append(self.safety.get_medical_warnings(medical_conditions))

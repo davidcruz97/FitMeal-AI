@@ -85,6 +85,13 @@ const AuthScreen = () => {
     );
   };
 
+  const openPrivacyPolicy = () => {
+    const privacyUrl = 'https://fitmeal.cinturillas247.com/privacy';
+    Linking.openURL(privacyUrl).catch((err) => 
+      Alert.alert('Error', 'Unable to open Privacy Policy')
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
@@ -145,7 +152,7 @@ const AuthScreen = () => {
               />
             </View>
 
-            {/* Terms and Conditions Checkbox - Only for Registration */}
+            {/* Terms and Privacy Policy Checkbox - Only for Registration */}
             {!isLogin && (
               <View style={styles.termsContainer}>
                 <TouchableOpacity
@@ -162,6 +169,10 @@ const AuthScreen = () => {
                     <Text style={styles.termsText}>I accept the </Text>
                     <TouchableOpacity onPress={openTermsAndConditions}>
                       <Text style={styles.termsLink}>Terms and Conditions</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.termsText}> and </Text>
+                    <TouchableOpacity onPress={openPrivacyPolicy}>
+                      <Text style={styles.termsLink}>Privacy Policy</Text>
                     </TouchableOpacity>
                   </View>
                 </TouchableOpacity>

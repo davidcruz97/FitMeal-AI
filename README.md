@@ -98,24 +98,25 @@ Many people struggle with:
 └──────────────────┘                            └────────────────┘
 ```
 
----
-
-## Prerequisites
-
-**Backend Requirements:**
+### Backend Requirements
+```
 - Python 3.9+
 - PostgreSQL 14+
 - Redis 6+
 - Ollama with Llama 3.2-3b model
-- 8GB RAM minimum
+- 8GB RAM and 2 Cores minimum
 - Anthropic API key for Claude Vision
 - USDA API key (free tier available)
+```
 
-**Mobile Requirements:**
+### Mobile Requirements
+```
 - Node.js 18+
 - npm or yarn
 - Expo CLI
+- Internet connection
 - iOS Simulator or Android Emulator (for development)
+```
 
 ---
 
@@ -161,9 +162,9 @@ FitMeal-AI features an on-device AI nutrition advisor powered by **Ollama with L
 - **Macro Explanations**: Educational content about nutrition fundamentals
 
 #### Privacy & Performance:
-- **100% Local Processing**: All AI inference runs on your server
-- **No Data Sharing**: User conversations never leave your infrastructure
-- **Model Warmup**: Pre-load model into RAM for 2-3 second response times
+- **100% Local Processing**: All AI inference runs on our server
+- **No Data Sharing**: User conversations never leave our infrastructure
+- **Model Warmup**: Pre-load model into RAM for 10-20 second response times
 - **Thread-Safe**: Handles multiple users simultaneously via Ollama's queuing
 - **Safety Filters**: Built-in allergen and medical condition awareness
 
@@ -214,25 +215,6 @@ FitMeal-AI features an on-device AI nutrition advisor powered by **Ollama with L
 - Servings consumed
 - Logged nutritional values
 - Timestamp with timezone support
-
-### Key Design Decisions
-
-**Dynamic Macro Calculation**
-- Nutritional values calculated in real-time from ingredients
-- No stored macro data in recipes table
-- Always accurate, even after ingredient updates
-- Based on `quantity_grams` field for consistency
-
-**Comprehensive User Profiling**
-- 10-screen onboarding captures detailed user data
-- Automatic BMR/TDEE calculations using Mifflin-St Jeor equation
-- Goal-based macro distribution
-- Activity-adjusted calorie targets
-
-**Timezone-Aware Logging**
-- All timestamps stored in UTC
-- Converted to user timezone for display
-- Proper daily meal aggregation
 
 ---
 
@@ -328,6 +310,7 @@ FitMeal-AI uses a comprehensive 10-screen onboarding process:
 - Rate limiting to prevent abuse (20 scans/hour per user)
 - Image compression before storage
 - Lazy loading for recipe ingredients
+- Prompt engineering for faster AI inference
 
 **Mobile App:**
 - Image compression before upload (max 5MB)
@@ -337,13 +320,13 @@ FitMeal-AI uses a comprehensive 10-screen onboarding process:
 
 ### Benchmark Results
 
-| Operation | Time | Notes |
-|-----------|------|-------|
-| Claude Vision Detection | 3-5s | Network-dependent |
-| Recipe Matching | <100ms | 100+ recipes in database |
-| Macro Calculation | <50ms | Dynamic from ingredients |
-| Local AI Response | 2-3s | After warmup |
-| Full Scan→Recipes Flow | 4-6s | Detection + matching |
+| Operation               | Time   | Notes                    |
+|-------------------------|--------|--------------------------|
+| Claude Vision Detection | 3-5s   | Network-dependent        |
+| Recipe Matching         | <100ms | 100+ recipes in database |
+| Macro Calculation       | <50ms  | Dynamic from ingredients |
+| Local AI Response       | 15-30s | After warmup             |
+| Full Scan→Recipes Flow  | 4-6s   | Detection + matching     |
 
 ---
 
@@ -354,49 +337,49 @@ FitMeal-AI uses a comprehensive 10-screen onboarding process:
 ```
 FitMeal-AI/
 ├── app/
-│   ├── __init__.py              # Flask app factory
-│   ├── models/                  # SQLAlchemy models
-│   │   ├── user.py             # User with nutrition logic
-│   │   ├── ingredient.py       # Ingredient database
-│   │   ├── recipe.py           # Recipe with macro calculation
-│   │   └── meal_scan.py        # Scans and meal logs
-│   ├── api/                     # API endpoints
-│   │   ├── auth.py             # Authentication
-│   │   ├── onboarding.py       # User onboarding
-│   │   ├── scan.py             # Image upload & detection
-│   │   ├── ingredients.py      # Ingredient search
-│   │   ├── recipes.py          # Recipe matching
-│   │   ├── meals.py            # Meal logging
-│   │   ├── ai.py               # AI features
-│   │   └── coach.py            # Coach tools
-│   ├── vision/                  # Computer vision
-│   │   ├── claude_detector.py  # Claude Vision API
-│   │   └── ingredient_mapper.py # Detection→DB mapping
-│   ├── ai/                      # Local AI features
-│   │   ├── llm_manager.py      # Ollama management
-│   │   ├── meal_recommender.py # Meal suggestions
-│   │   ├── nutrition_advisor.py # Q&A system
+│   ├── __init__.py                 # Flask app factory
+│   ├── models/                     # SQLAlchemy models
+│   │   ├── user.py                 # User with nutrition logic
+│   │   ├── ingredient.py           # Ingredient database
+│   │   ├── recipe.py               # Recipe with macro calculation
+│   │   └── meal_scan.py            # Scans and meal logs
+│   ├── api/                        # API endpoints
+│   │   ├── auth.py                 # Authentication
+│   │   ├── onboarding.py           # User onboarding
+│   │   ├── scan.py                 # Image upload & detection
+│   │   ├── ingredients.py          # Ingredient search
+│   │   ├── recipes.py              # Recipe matching
+│   │   ├── meals.py                # Meal logging
+│   │   ├── ai.py                   # AI features
+│   │   └── coach.py                # Coach tools
+│   ├── vision/                     # Computer vision
+│   │   ├── claude_detector.py      # Claude Vision API
+│   │   └── ingredient_mapper.py    # Detection→DB mapping
+│   ├── ai/                         # Local AI features
+│   │   ├── llm_manager.py          # Ollama management
+│   │   ├── meal_recommender.py     # Meal suggestions
+│   │   ├── nutrition_advisor.py    # Q&A system
 │   │   ├── nutrition_calculator.py # Advanced calculations
-│   │   ├── meal_planner.py     # Meal planning logic
-│   │   └── safety.py           # Safety filters
-│   ├── admin/                   # Web admin panel
-│   │   └── routes.py           # Admin dashboard
-│   └── utils/                   # Utilities
-│       └── logger.py           # Structured logging
-├── mobile/                      # React Native app
+│   │   ├── meal_planner.py         # Meal planning logic
+│   │   └── safety.py               # Safety filters
+│   ├── admin/                      # Web admin panel
+│   │   └── routes.py               # Admin dashboard
+│   └── utils/                      # Utilities
+│       └── logger.py               # Structured logging
+├── mobile/                         # React Native app
 │   ├── src/
-│   │   ├── api/                # API client functions
-│   │   ├── components/         # Reusable components
-│   │   ├── screens/            # App screens
-│   │   ├── contexts/           # React contexts
-│   │   ├── constants/          # Configuration
-│   │   └── utils/              # Utilities
-│   └── App.js                  # Entry point
-├── migrations/                  # Database migrations
-├── config.py                   # Flask configuration
-├── run.py                      # Application entry point
-├── requirements.txt            # Python dependencies
-└── README.md                   # This file
+│   │   ├── api/                    # API client functions
+│   │   ├── components/             # Reusable components
+│   │   ├── screens/                # App screens
+│   │   ├── contexts/               # React contexts
+│   │   ├── constants/              # Configuration
+│   │   └── utils/                  # Utilities
+│   └── App.js                      # Entry point
+├── migrations/                     # Database migrations
+├── config.py                       # Flask configuration
+├── run.py                          # Application entry point
+├── requirements.txt                # Python dependencies
+└── README.md                       # This file
 ```
 
 ### API Response Format
@@ -435,36 +418,33 @@ logger.debug("Mapping detection 'apple' to ingredient")
 ## Future Enhancements
 
 ### Planned Features
-- Multi-language support (currently English with Spanish ingredient names)
+- Multi-language support (currently English)
 - Barcode scanning for packaged foods
 - Meal planning calendar (weekly/monthly views)
 - Social features (share recipes with community)
 - Integration with fitness trackers (Apple Health, Google Fit)
-- Voice commands for meal logging
 - Advanced dietary restriction filters (vegan, keto, paleo, etc.)
 - Shopping list generation from meal plans
-- Recipe import from URLs
-- Batch meal prep calculator
 - Progress photos and body measurements tracking
 
 ### Technical Improvements
 - GraphQL API for more flexible queries
-- Real-time updates via WebSockets
 - Advanced caching strategies
 - Machine learning for recipe recommendations
 - Serverless functions for AI processing
 - Multi-region deployment for lower latency
 - Advanced analytics dashboard for coaches
+- Prompt engineering optimization for 2-5s responses
 
 ---
 
 ## Contributing
 
-This project is part of the **Staffbase AI Innovations Lab Challenge** and is actively developed for the competition.
+This project is part of the **Staffbase AI Innovations Lab Challenge** and was developed for the competition.
 
 ### Sponsor
-- **Organization**: Coaching FV
-- **Coach**: Fernanda Villanueva
+- **Organization**: Cinturillas 24/7
+- **Nutritionist**: Fernanda Villanueva
 - **Website**: https://cinturillas247.com
 
 ### Development Team
@@ -500,7 +480,7 @@ This project is part of the **Staffbase AI Innovations Lab Challenge** and is ac
 
 **Practical Real-World Application**
 - Solves actual nutrition planning problems
-- Used by real clients of Coaching FV
+- It will be later used by real clients of the sponsor
 - Proven 4-6 second end-to-end response time
 - Handles multiple concurrent users
 
@@ -511,13 +491,50 @@ This project is part of the **Staffbase AI Innovations Lab Challenge** and is ac
 - Thread-safe local AI processing
 - Mobile-first responsive design
 
+### Development Timeline
+
+**Overview**
+FitMeal-AI was developed in 16 days using modern AI-assisted development practices.
+
+**Timeline**
+- **October 20, 2025**: First commit - Initial Flask backend structure
+- **October 21-25**: Core API development (auth, ingredients, recipes)
+- **October 26-28**: React Native mobile app foundation
+- **October 29-31**: Claude Vision API integration
+- **November 1-2**: Local AI features with Ollama
+- **November 3-4**: Production deployment and testing
+- **November 5, 2025**: Published to Apple App Store
+
+### Development Approach
+
+**AI-Assisted Scaffolding**
+Used Claude AI to:
+- Design database schema and relationships
+- Generate initial API endpoint structure
+- Create boilerplate code for authentication
+- Architect component hierarchy for mobile app
+
+**Independent Development**
+Built from scratch:
+- 10-screen onboarding system with BMR/TDEE calculations
+- Hybrid AI detection system (Claude Vision + local LLM)
+- Complex nutrition calculation algorithms
+- Production deployment infrastructure
+- App Store submission and optimization
+
+**This project demonstrates**
+1. **Effective AI Tool Usage**: Leveraging AI for rapid scaffolding
+2. **Engineering Skill**: Extending beyond AI assistance with complex logic
+3. **Modern Workflow**: AI + human collaboration for maximum productivity
+4. **Production Focus**: Delivering real value, not just prototypes
+
 ---
 
 ## License
 
-This project is proprietary software developed for the Staffbase AI Innovations Lab Challenge.
+This project is proprietary software developed for the Staffbase AI Innovations Lab Challenge under the sponsorship of Cinturillas 24/7.
 
-**© 2024 Darbcon KMU. All rights reserved.**
+**© 2025 Darbcon KMU. All rights reserved.**
 
 ---
 
@@ -528,7 +545,7 @@ For questions, feedback, or collaboration inquiries:
 - **Email**: david.cruz.97@hotmail.com
 - **GitHub**: [@davidcruz97](https://github.com/davidcruz97/)
 - **Organization**: Darbcon KMU (https://darbcon.com)
-- **Sponsor**: Coaching FV (https://cinturillas247.com)
+- **Sponsor**: Cinturillas 24/7 (https://cinturillas247.com)
 
 ---
 

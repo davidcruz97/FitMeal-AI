@@ -17,3 +17,8 @@ def terms():
 def privacy():
     """Privacy Policy page (to be implemented)"""
     return render_template('privacy.html')
+
+# @bp.route('/icon-generator')
+# def icon_generator():
+#     """Icon generator page for creating app icons"""
+#     return render_template('icon_generator.html')

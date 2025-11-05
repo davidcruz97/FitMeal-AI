@@ -56,10 +56,10 @@ const LogMealScreen = ({ route }) => {
   }, [recipe]);
 
   const loadIngredientDetails = async () => {
-    console.log('Recipe data:', JSON.stringify(recipe, null, 2));
+    // console.log('Recipe data:', JSON.stringify(recipe, null, 2));
     
     if (!recipe.ingredients || recipe.ingredients.length === 0) {
-      console.log('No ingredients found in recipe');
+      // console.log('No ingredients found in recipe');
       setLoadingIngredients(false);
       return;
     }
@@ -68,12 +68,12 @@ const LogMealScreen = ({ route }) => {
       const detailedIngredients = await Promise.all(
         recipe.ingredients.map(async (ing) => {
           try {
-            console.log('Processing ingredient:', JSON.stringify(ing, null, 2));
+            // console.log('Processing ingredient:', JSON.stringify(ing, null, 2));
             
             const ingredientId = ing.ingredient_id || ing.id;
             
             if (!ingredientId) {
-              console.warn('No ingredient_id found for ingredient:', ing);
+              // console.warn('No ingredient_id found for ingredient:', ing);
               return {
                 name: ing.name || 'Unknown',
                 quantity: parseFloat(ing.quantity) || 100,
@@ -87,7 +87,7 @@ const LogMealScreen = ({ route }) => {
               };
             }
 
-            console.log(`Fetching ingredient details for ID: ${ingredientId}`);
+            // console.log(`Fetching ingredient details for ID: ${ingredientId}`);
             const result = await getIngredientById(ingredientId);
             const ingredientData = result.ingredient;
 
@@ -106,7 +106,7 @@ const LogMealScreen = ({ route }) => {
               isFromRecipe: true, // Mark original recipe ingredients
             };
           } catch (error) {
-            console.error(`Error loading ingredient:`, error);
+            // console.error(`Error loading ingredient:`, error);
             return {
               name: ing.name || 'Unknown',
               quantity: parseFloat(ing.quantity) || 100,
@@ -123,10 +123,10 @@ const LogMealScreen = ({ route }) => {
         })
       );
 
-      console.log('Detailed ingredients loaded:', detailedIngredients);
+      // console.log('Detailed ingredients loaded:', detailedIngredients);
       setIngredients(detailedIngredients);
     } catch (error) {
-      console.error('Error loading ingredients:', error);
+      // console.error('Error loading ingredients:', error);
       Alert.alert('Error', 'Failed to load ingredient details');
     } finally {
       setLoadingIngredients(false);
@@ -156,12 +156,12 @@ const LogMealScreen = ({ route }) => {
       }
     });
 
-    console.log('Calculated macros:', {
-      totalCalories,
-      totalProtein,
-      totalCarbs,
-      totalFats,
-    });
+    // console.log('Calculated macros:', {
+    //   totalCalories,
+    //   totalProtein,
+    //   totalCarbs,
+    //   totalFats,
+    // });
 
     setCalculatedMacros({
       calories: totalCalories,
@@ -229,7 +229,7 @@ const LogMealScreen = ({ route }) => {
       const result = await searchIngredients(query, 10);
       setSearchResults(result.ingredients || []);
     } catch (error) {
-      console.error('Search error:', error);
+      // console.error('Search error:', error);
       Alert.alert('Error', 'Failed to search ingredients');
     } finally {
       setSearching(false);
@@ -265,7 +265,7 @@ const LogMealScreen = ({ route }) => {
       
       Alert.alert('Success', `${fullIngredient.name} added!`);
     } catch (error) {
-      console.error('Error adding ingredient:', error);
+      // console.error('Error adding ingredient:', error);
       Alert.alert('Error', 'Failed to add ingredient');
     }
   };
@@ -293,8 +293,8 @@ const LogMealScreen = ({ route }) => {
           fats_per_100g: ing.fats_per_100g,
         }));
 
-      console.log('Sending custom ingredients:', customIngredients);
-      console.log('Calculated macros to match:', calculatedMacros);
+      // console.log('Sending custom ingredients:', customIngredients);
+      // console.log('Calculated macros to match:', calculatedMacros);
 
       await logMeal(recipe.id, mealType, 1, '', null, customIngredients);
       

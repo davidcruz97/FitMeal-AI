@@ -30,14 +30,14 @@ const HomeScreen = () => {
   // On first mount, check if we have preloaded data
   useEffect(() => {
     if (isFirstLoad && initialData) {
-      console.log('Using preloaded dashboard data');
+      // console.log('Using preloaded dashboard data');
       setTodayMeals(initialData.todayMeals || []);
       setStats(initialData.todayStats);
       setIsFirstLoad(false);
       clearInitialData(); // Clear so subsequent visits load fresh
     } else if (isFirstLoad) {
       // No preloaded data, load it now
-      console.log('No preloaded data, loading now...');
+      // console.log('No preloaded data, loading now...');
       setLoading(true);
       loadData();
       setIsFirstLoad(false);
@@ -60,13 +60,13 @@ const HomeScreen = () => {
         getNutritionStats(1), // Today's stats
       ]);
 
-      console.log('Home - Meals data:', JSON.stringify(mealsData, null, 2));
-      console.log('Home - Stats data:', JSON.stringify(statsData, null, 2));
+      // console.log('Home - Meals data:', JSON.stringify(mealsData, null, 2));
+      // console.log('Home - Stats data:', JSON.stringify(statsData, null, 2));
 
       setTodayMeals(mealsData.meals || []);
       setStats(statsData);
     } catch (error) {
-      console.error('Error loading data:', error);
+      // console.error('Error loading data:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -197,7 +197,7 @@ const MacroCard = ({ label, value, unit, color }) => (
 );
 
 const MealItem = ({ meal }) => {
-  console.log('MealItem - meal object:', JSON.stringify(meal, null, 2));
+  // console.log('MealItem - meal object:', JSON.stringify(meal, null, 2));
   
   const calories = meal.nutritional_info?.calories || 0;
   // Try multiple possible field names for recipe name

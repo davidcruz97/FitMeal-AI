@@ -47,14 +47,14 @@ const ReviewIngredientsScreen = () => {
                   verified: result.ingredient.is_verified
                 };
               } catch (error) {
-                console.error(`Failed to fetch ingredient ${id}:`, error);
+                // console.error(`Failed to fetch ingredient ${id}:`, error);
                 return null;
               }
             })
           );
           setManualIngredients(manualIngredientsData.filter(ing => ing !== null));
         } catch (error) {
-          console.error('Error loading manual ingredients:', error);
+          // console.error('Error loading manual ingredients:', error);
         }
       } else {
         setManualIngredients([]);

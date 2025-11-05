@@ -80,9 +80,9 @@ const AIAssistantScreen = () => {
     try {
       setAiWarming(true);
       await warmupAI();
-      console.log('✅ AI model warmed up');
+      // console.log('✅ AI model warmed up');
     } catch (error) {
-      console.warn('⚠️ AI warmup failed:', error);
+      // console.warn('⚠️ AI warmup failed:', error);
       // Don't show error to user, warmup is optional optimization
     } finally {
       setAiWarming(false);
@@ -146,7 +146,7 @@ const AIAssistantScreen = () => {
       }, 100);
 
     } catch (error) {
-      console.error('Failed to get AI response:', error);
+      // console.error('Failed to get AI response:', error);
       
       const errorMessage = {
         id: (Date.now() + 1).toString(),
@@ -186,7 +186,7 @@ const AIAssistantScreen = () => {
       }, 100);
 
     } catch (error) {
-      console.error('Failed to get topic explanation:', error);
+      // console.error('Failed to get topic explanation:', error);
       Alert.alert(
         'Connection Error',
         'Could not load the explanation. Please try again.',

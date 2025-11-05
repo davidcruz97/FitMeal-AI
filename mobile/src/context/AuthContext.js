@@ -36,11 +36,11 @@ export const AuthProvider = ({ children }) => {
           await saveUser(freshUserData);
           setUser(freshUserData);
           
-          console.log('✅ Loaded fresh user data from API');
-          console.log('   Profile completed:', freshUserData.profile_completed);
+          // console.log('✅ Loaded fresh user data from API');
+          // console.log('   Profile completed:', freshUserData.profile_completed);
         } catch (apiError) {
           // If API fails, use cached data
-          console.log('⚠️  API refresh failed, using cached data:', apiError.message);
+          // console.log('⚠️  API refresh failed, using cached data:', apiError.message);
           setUser(userData);
         }
         
@@ -52,7 +52,7 @@ export const AuthProvider = ({ children }) => {
         }
       }
     } catch (error) {
-      console.error('Error checking auth status:', error);
+      // console.error('Error checking auth status:', error);
     } finally {
       // Ensure splash screen shows for minimum time
       const elapsedTime = Date.now() - startTime;
@@ -66,7 +66,7 @@ export const AuthProvider = ({ children }) => {
 
   const preloadDashboardData = async () => {
     try {
-      console.log('Preloading dashboard data during splash screen...');
+      // console.log('Preloading dashboard data during splash screen...');
       const [mealsData, statsData] = await Promise.all([
         getMealHistory(1), // Today's meals
         getNutritionStats(1), // Today's stats
@@ -78,9 +78,9 @@ export const AuthProvider = ({ children }) => {
         loadedAt: Date.now(),
       });
       
-      console.log('Dashboard data preloaded successfully');
+      // console.log('Dashboard data preloaded successfully');
     } catch (error) {
-      console.error('Error preloading dashboard data:', error);
+      // console.error('Error preloading dashboard data:', error);
       // Don't block the app if preloading fails
       setInitialData(null);
     }
@@ -122,7 +122,7 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true };
     } catch (error) {
-      console.error('Login error:', error);
+      // console.error('Login error:', error);
       setIsLoading(false); // Hide splash on error
       return {
         success: false,
@@ -158,7 +158,7 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true };
     } catch (error) {
-      console.error('Registration error:', error);
+      // console.error('Registration error:', error);
       setIsLoading(false); // Hide splash on error
       return {
         success: false,
@@ -182,20 +182,20 @@ export const AuthProvider = ({ children }) => {
           // Update state
           setUser(updatedUser);
           
-          console.log('User refreshed successfully from API');
-          console.log('   Profile completed:', updatedUser.profile_completed);
+          // console.log('User refreshed successfully from API');
+          // console.log('   Profile completed:', updatedUser.profile_completed);
         } catch (apiError) {
           // If API call fails, load from storage instead
-          console.log('API refresh failed, loading from storage:', apiError.message);
+          // console.log('API refresh failed, loading from storage:', apiError.message);
           const userData = await getUser();
           if (userData) {
             setUser(userData);
-            console.log('User loaded from storage');
+            // console.log('User loaded from storage');
           }
         }
       }
     } catch (error) {
-      console.error('Failed to refresh user:', error);
+      // console.error('Failed to refresh user:', error);
     }
   };
 
@@ -207,7 +207,7 @@ export const AuthProvider = ({ children }) => {
       setInitialData(null);
       // Note: isLoading stays false, so auth screen shows immediately
     } catch (error) {
-      console.error('Logout error:', error);
+      // console.error('Logout error:', error);
     }
   };
 

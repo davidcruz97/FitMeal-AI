@@ -42,9 +42,9 @@ const ManualIngredientsScreen = () => {
 
     setSearching(true);
     try {
-      console.log(`Searching for: "${query}"`);
+      // console.log(`Searching for: "${query}"`);
       const results = await searchIngredients(query, 20);
-      console.log('Search results:', results);
+      // console.log('Search results:', results);
       
       const ingredients = results.ingredients || results.results || [];
       setSearchResults(ingredients);
@@ -53,7 +53,7 @@ const ManualIngredientsScreen = () => {
         setError(`No ingredients found for "${query}". Try a different search term.`);
       }
     } catch (error) {
-      console.error('Search error:', error);
+      // console.error('Search error:', error);
       setError(error.message || 'Failed to search ingredients. Please try again.');
       Alert.alert('Search Error', error.message || 'Failed to search ingredients');
     } finally {

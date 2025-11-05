@@ -16,10 +16,12 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.fitmealai.app",
+      "bundleIdentifier": "com.cinturillas247.fitmealai",
+      "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "FitMeal AI needs camera access to detect ingredients in your photos.",
-        "NSPhotoLibraryUsageDescription": "FitMeal AI needs photo library access to let you select ingredient photos."
+        "NSPhotoLibraryUsageDescription": "FitMeal AI needs photo library access to let you select ingredient photos.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -27,11 +29,13 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#4CAF50"
       },
-      "package": "com.fitmealai.app",
+      "package": "com.cinturillas247.fitmealai",
+      "versionCode": 1,
       "permissions": [
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -49,7 +53,14 @@
         {
           "photosPermission": "Allow FitMeal AI to access your photos to select ingredient images."
         }
-      ]
-    ]
+      ],
+      "expo-font"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "c58652c6-92f1-4522-abda-684098d7de18"
+      }
+    },
+    "owner": "davidcruz97"
   }
 }

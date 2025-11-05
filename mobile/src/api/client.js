@@ -21,7 +21,7 @@ apiClient.interceptors.request.use(
       }
       return config;
     } catch (error) {
-      console.error('Error in request interceptor:', error);
+      // console.error('Error in request interceptor:', error);
       return config;
     }
   },

@@ -239,25 +239,42 @@ def get_nutrition_stats():
     
     Query params:
         days: calculate stats for last N days (default: 7)
+        timezone_offset: client's timezone offset in minutes (default: 0)
     """
     logger = current_app.logger
     user_id = int(get_jwt_identity())
     
     try:
         days = int(request.args.get('days', 7))
+        # Get timezone offset from client (in minutes)
+        timezone_offset = int(request.args.get('timezone_offset', 0))
         
-        logger.debug(f"📊 Calculating nutrition stats for last {days} days [User: {user_id}]")
+        logger.debug(f"📊 Calculating nutrition stats for last {days} days [User: {user_id}] [TZ offset: {timezone_offset}min]")
         
-        # Calculate date range
-        since_date = datetime.utcnow() - timedelta(days=days)
+        # Calculate date range in user's timezone
+        user_now = datetime.utcnow() + timedelta(minutes=timezone_offset)
+        user_today = user_now.date()
+        since_date = user_today - timedelta(days=days - 1)  # Include today
         
-        # Get all meals in range
+        logger.debug(f"   User's today: {user_today}, Since date: {since_date}")
+        
+        # Get all meals (we'll filter by date in Python)
         meals = MealLog.get_active_query().filter(
-            MealLog.user_id == user_id,
-            MealLog.consumed_at >= since_date
+            MealLog.user_id == user_id
         ).all()
         
-        if not meals:
+        # Filter meals by date in user's timezone
+        filtered_meals = []
+        for meal in meals:
+            # Convert meal's UTC time to user's timezone
+            meal_user_time = meal.consumed_at + timedelta(minutes=timezone_offset)
+            meal_date = meal_user_time.date()
+            
+            # Check if meal is within the date range
+            if since_date <= meal_date <= user_today:
+                filtered_meals.append(meal)
+        
+        if not filtered_meals:
             logger.info(f"ℹ️  No meals found for stats calculation [User: {user_id}]")
             return jsonify({
                 'stats': {
@@ -275,19 +292,24 @@ def get_nutrition_stats():
             }), 200
         
         # Calculate totals
-        total_calories = sum(meal.calories_logged for meal in meals)
-        total_protein = sum(meal.protein_logged for meal in meals)
-        total_carbs = sum(meal.carbs_logged for meal in meals)
-        total_fats = sum(meal.fats_logged for meal in meals)
+        total_calories = sum(meal.calories_logged for meal in filtered_meals)
+        total_protein = sum(meal.protein_logged for meal in filtered_meals)
+        total_carbs = sum(meal.carbs_logged for meal in filtered_meals)
+        total_fats = sum(meal.fats_logged for meal in filtered_meals)
 
-        # Calculate the actual number of unique days with meals
-        unique_days = len(set(meal.consumed_at.date() for meal in meals))
-        days_with_meals = max(unique_days, 1)  # Avoid division by zero
+        # Calculate unique days with meals (in user's timezone)
+        unique_days = len(set(
+            (meal.consumed_at + timedelta(minutes=timezone_offset)).date() 
+            for meal in filtered_meals
+        ))
+        days_with_meals = max(unique_days, 1)
 
-        # Calculate daily breakdown
+        # Calculate daily breakdown (in user's timezone)
         daily_breakdown = {}
-        for meal in meals:
-            date_key = meal.consumed_at.date().isoformat()
+        for meal in filtered_meals:
+            meal_user_time = meal.consumed_at + timedelta(minutes=timezone_offset)
+            date_key = meal_user_time.date().isoformat()
+            
             if date_key not in daily_breakdown:
                 daily_breakdown[date_key] = {
                     'date': date_key,
@@ -310,11 +332,11 @@ def get_nutrition_stats():
 
         # Calculate meal type distribution
         meal_type_counts = {}
-        for meal in meals:
+        for meal in filtered_meals:
             meal_type_counts[meal.meal_type] = meal_type_counts.get(meal.meal_type, 0) + 1
 
         logger.info(
-            f"✅ Calculated nutrition stats: {len(meals)} meals over {days_with_meals} days | "
+            f"✅ Calculated nutrition stats: {len(filtered_meals)} meals over {days_with_meals} days | "
             f"Avg {total_calories/days_with_meals:.0f} kcal/day | "
             f"P: {total_protein/days_with_meals:.0f}g C: {total_carbs/days_with_meals:.0f}g "
             f"F: {total_fats/days_with_meals:.0f}g [User: {user_id}]"
@@ -322,7 +344,7 @@ def get_nutrition_stats():
 
         return jsonify({
             'stats': {
-                'total_meals': len(meals),
+                'total_meals': len(filtered_meals),
                 'total_calories': round(total_calories, 1),
                 'total_protein': round(total_protein, 1),
                 'total_carbs': round(total_carbs, 1),
@@ -337,8 +359,8 @@ def get_nutrition_stats():
             'daily_breakdown': sorted(daily_breakdown.values(), key=lambda x: x['date'], reverse=True),
             'days': days,
             'date_range': {
-                'from': since_date.date().isoformat(),
-                'to': datetime.utcnow().date().isoformat()
+                'from': since_date.isoformat(),
+                'to': user_today.isoformat()
             }
         }), 200
         

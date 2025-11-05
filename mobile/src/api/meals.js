@@ -12,12 +12,12 @@ export const logMeal = async (recipeId, mealType, servings = 1, notes = '', scan
   const offsetSign = timezoneOffset >= 0 ? '+' : '-';
   const consumed_at = `${localISOTime}${offsetSign}${offsetHours}:${offsetMinutes}`;
   
-  console.log('Logging meal with the following details:',
-    'Recipe ID', recipeId,
-    'Meal Type', mealType,
-    'Consumed at', consumed_at,
-    'Custom Ingredients', customIngredients
-  );
+  // console.log('Logging meal with the following details:',
+  //   'Recipe ID', recipeId,
+  //   'Meal Type', mealType,
+  //   'Consumed at', consumed_at,
+  //   'Custom Ingredients', customIngredients
+  // );
   
   try {
     const payload = {
@@ -37,16 +37,20 @@ export const logMeal = async (recipeId, mealType, servings = 1, notes = '', scan
     const response = await apiClient.post('/meals/log', payload);
     return response.data;
   } catch (error) {
-    console.error('Log meal error:', error.response?.data || error.message);
+    // console.error('Log meal error:', error.response?.data || error.message);
     throw error;
   }
 };
 
-// Keep other functions unchanged
 export const getMealHistory = async (days = 7) => {
   try {
+    const timezoneOffset = -new Date().getTimezoneOffset();
+    
     const response = await apiClient.get('/meals/history', {
-      params: { days },
+      params: { 
+        days,
+        timezone_offset: timezoneOffset 
+      },
     });
     return response.data;
   } catch (error) {
@@ -56,8 +60,14 @@ export const getMealHistory = async (days = 7) => {
 
 export const getNutritionStats = async (days = 7) => {
   try {
+    // Get timezone offset in minutes
+    const timezoneOffset = -new Date().getTimezoneOffset();
+    
     const response = await apiClient.get('/meals/stats', {
-      params: { days },
+      params: { 
+        days,
+        timezone_offset: timezoneOffset 
+      },
     });
     return response.data;
   } catch (error) {

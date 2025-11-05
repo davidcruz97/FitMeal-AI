@@ -41,7 +41,7 @@ const HistoryScreen = () => {
       setHistory(historyData.meals || []);
       setStats(statsData);
     } catch (error) {
-      console.error('Error loading history:', error);
+      // console.error('Error loading history:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -67,7 +67,7 @@ const HistoryScreen = () => {
               await deleteMealLog(mealId);
               loadData(); // Reload data after deletion
             } catch (error) {
-              console.error('Error deleting meal:', error);
+              // console.error('Error deleting meal:', error);
               Alert.alert('Error', 'Failed to delete meal');
             }
           },

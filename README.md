@@ -487,14 +487,14 @@ This project is part of the **Staffbase AI Innovations Lab Challenge** and was d
 **Technical Excellence**
 - RESTful API with JWT security
 - SQLAlchemy ORM with proper relationships
-- Dynamic macro calculation (never stale data)
+- Llama 3.2-3b: Smaller model, excellent quality
+- CPU-only inference: No GPU required
 - Thread-safe local AI processing
 - Mobile-first responsive design
 
 ### Development Timeline
 
-**Overview**
-FitMeal-AI was developed in 16 days using modern AI-assisted development practices.
+**Overview:** FitMeal-AI was developed in 16 days using modern AI-assisted development practices.
 
 **Timeline**
 - **October 20, 2025**: First commit - Initial Flask backend structure
@@ -508,14 +508,12 @@ FitMeal-AI was developed in 16 days using modern AI-assisted development practic
 ### Development Approach
 
 **AI-Assisted Scaffolding**
-Used Claude AI to:
 - Design database schema and relationships
 - Generate initial API endpoint structure
 - Create boilerplate code for authentication
 - Architect component hierarchy for mobile app
 
-**Independent Development**
-Built from scratch:
+**Independent Development Built from scratch**
 - 10-screen onboarding system with BMR/TDEE calculations
 - Hybrid AI detection system (Claude Vision + local LLM)
 - Complex nutrition calculation algorithms

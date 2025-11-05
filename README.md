@@ -525,6 +525,7 @@ This project is part of the **Staffbase AI Innovations Lab Challenge** and was d
 2. **Engineering Skill**: Extending beyond AI assistance with complex logic
 3. **Modern Workflow**: AI + human collaboration for maximum productivity
 4. **Production Focus**: Delivering real value, not just prototypes
+5. **Strategic architecture**: professional results on modest hardware
 
 ---
 

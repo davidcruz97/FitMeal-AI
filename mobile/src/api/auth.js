@@ -46,3 +46,13 @@ export const logoutUser = async () => {
     throw error;
   }
 };
+
+// Delete user account
+export const deleteAccount = async () => {
+  try {
+    const response = await apiClient.delete('/auth/delete-account');
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};

@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import { deleteAccount } from '../api/auth';
 import { useOnboarding } from '../context/OnBoardingContext';
 import { useNavigation } from '@react-navigation/native';
 import Colors from '../constants/colors';
@@ -36,6 +37,53 @@ const ProfileScreen = () => {
           style: 'destructive',
           onPress: async () => {
             await logout();
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to permanently delete your account? This action cannot be undone and all your data will be lost.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Account',
+          style: 'destructive',
+          onPress: async () => {
+            // Show confirmation dialog
+            Alert.alert(
+              'Final Confirmation',
+              'This is your last chance. Are you absolutely sure you want to delete your account?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Yes, Delete Forever',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      await deleteAccount();
+                      Alert.alert(
+                        'Account Deleted',
+                        'Your account has been permanently deleted.',
+                        [
+                          {
+                            text: 'OK',
+                            onPress: async () => {
+                              await logout();
+                            },
+                          },
+                        ]
+                      );
+                    } catch (error) {
+                      Alert.alert('Error', error.message || 'Failed to delete account');
+                    }
+                  },
+                },
+              ]
+            );
           },
         },
       ]
@@ -378,7 +426,7 @@ const ProfileScreen = () => {
           </View>
           <View style={styles.sectionContent}>
             <Text style={styles.aboutText}>FitMeal AI - AI-Powered Meal Planning</Text>
-            <Text style={styles.aboutVersion}>Version 1.0.0</Text>
+            <Text style={styles.aboutVersion}>Version 1.1.0</Text>
           </View>
         </View>
 
@@ -390,6 +438,16 @@ const ProfileScreen = () => {
         >
           <FontAwesome5 name="sign-out-alt" size={18} color="#FFF" />
           <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+
+        {/* Delete Account Button */}
+        <TouchableOpacity 
+          style={styles.deleteAccountButton} 
+          onPress={handleDeleteAccount}
+          activeOpacity={0.7}
+        >
+          <FontAwesome5 name="user-times" size={18} color="#FFF" />
+          <Text style={styles.deleteAccountText}>Delete Account</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -581,6 +639,25 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   logoutText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  deleteAccountButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#8B0000',
+    marginHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 20,
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 10,
+    borderWidth: 2,
+    borderColor: '#600000',
+  },
+  deleteAccountText: {
     color: '#FFF',
     fontSize: 16,
     fontWeight: 'bold',

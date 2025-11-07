@@ -216,7 +216,69 @@ def logout():
     except Exception as e:
         logger.error(f"❌ Logout error: {e}", exc_info=True)
         return jsonify({'error': f'Logout failed: {str(e)}'}), 500
-
+    
+@bp.route('/delete-account', methods=['DELETE'])
+@jwt_required()
+def delete_account():
+    """
+    Permanently delete user account and all associated data
+    
+    Headers:
+        Authorization: Bearer <access_token>
+    
+    This will delete:
+    - User profile
+    - All meal logs
+    - All meal scans
+    - All user data
+    """
+    logger = current_app.logger
+    
+    try:
+        user_id = int(get_jwt_identity())
+        user = User.query.get(user_id)
+        
+        if not user:
+            logger.warning(f"⚠️ Delete account failed: User not found (ID: {user_id})")
+            return jsonify({'error': 'User not found'}), 404
+        
+        user_email = user.email  # Store for logging before deletion
+        
+        logger.info(f"🗑️ Starting account deletion for: {user_email} (ID: {user_id})")
+        
+        # Import models
+        from app.models.meal_scan import MealLog, MealScan
+        
+        # Delete user's meal logs (hard delete, not soft)
+        meal_logs = MealLog.query.filter_by(user_id=user_id).all()
+        meal_log_count = len(meal_logs)
+        for meal_log in meal_logs:
+            db.session.delete(meal_log)
+        logger.info(f"  ├─ Deleted {meal_log_count} meal logs")
+        
+        # Delete user's meal scans (hard delete, not soft)
+        scans = MealScan.query.filter_by(user_id=user_id).all()
+        scan_count = len(scans)
+        for scan in scans:
+            db.session.delete(scan)
+        logger.info(f"  ├─ Deleted {scan_count} meal scans")
+        
+        # Delete the user (cascade should handle nutrition_targets and user_profile)
+        db.session.delete(user)
+        
+        # Commit all deletions
+        db.session.commit()
+        
+        logger.info(f"✅ Account permanently deleted: {user_email} (ID: {user_id})")
+        
+        return jsonify({
+            'message': 'Account and all associated data have been permanently deleted'
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"❌ Account deletion failed: {e}", exc_info=True)
+        return jsonify({'error': f'Failed to delete account: {str(e)}'}), 500
 
 # Admin only endpoint example
 @bp.route('/admin/users', methods=['GET'])

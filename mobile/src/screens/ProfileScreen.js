@@ -8,20 +8,25 @@ import {
   ScrollView,
   Alert,
   Platform,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
-import { deleteAccount } from '../api/auth';
+import { deleteAccount, changePassword } from '../api/auth';
 import { useOnboarding } from '../context/OnBoardingContext';
 import { useNavigation } from '@react-navigation/native';
-import Colors from '../constants/colors';
+import Colors from '../constants/colors'; 
 
 const ProfileScreen = () => {
   const { user, logout } = useAuth();
   const { setIsViewingResults, resetOnboarding } = useOnboarding();
   const navigation = useNavigation();
   const [expandedSection, setExpandedSection] = useState(null);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
 
   const profile = user?.profile || {};
   const nutritionTargets = user?.nutrition_targets || {};
@@ -88,6 +93,55 @@ const ProfileScreen = () => {
         },
       ]
     );
+  };
+
+  const handleChangePassword = async () => {
+    // Validation
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      Alert.alert('Error', 'Please fill in all password fields');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      Alert.alert('Error', 'New password must be at least 6 characters');
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      Alert.alert('Error', 'New passwords do not match');
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      Alert.alert('Error', 'New password must be different from current password');
+      return;
+    }
+
+    setChangingPassword(true);
+
+    try {
+      await changePassword(currentPassword, newPassword);
+
+      Alert.alert(
+        'Success',
+        'Your password has been changed successfully',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              setCurrentPassword('');
+              setNewPassword('');
+              setConfirmNewPassword('');
+              setExpandedSection(null); // Close the section
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      Alert.alert('Error', error.message || 'Failed to change password');
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   const handleRerunOnboarding = () => {
@@ -364,16 +418,6 @@ const ProfileScreen = () => {
                 </View>
               )}
             </TouchableOpacity>
-
-            {/* Re-configure Profile Button */}
-            <TouchableOpacity
-              style={styles.reconfigureButton}
-              onPress={handleRerunOnboarding}
-              activeOpacity={0.7}
-            >
-              <FontAwesome5 name="sync-alt" size={18} color={Colors.primary} />
-              <Text style={styles.reconfigureButtonText}>Update My Profile</Text>
-            </TouchableOpacity>
           </>
         ) : (
           <View style={styles.incompleteSection}>
@@ -439,15 +483,113 @@ const ProfileScreen = () => {
           <FontAwesome5 name="sign-out-alt" size={18} color="#FFF" />
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
-
-        {/* Delete Account Button */}
-        <TouchableOpacity 
-          style={styles.deleteAccountButton} 
-          onPress={handleDeleteAccount}
+        {/* Re-configure Profile Button */}
+        <TouchableOpacity
+          style={styles.reconfigureButton}
+          onPress={handleRerunOnboarding}
           activeOpacity={0.7}
         >
-          <FontAwesome5 name="user-times" size={18} color="#FFF" />
-          <Text style={styles.deleteAccountText}>Delete Account</Text>
+          <FontAwesome5 name="sync-alt" size={18} color={Colors.primary} />
+          <Text style={styles.reconfigureButtonText}>Update My Profile</Text>
+        </TouchableOpacity>
+
+        {/* Account Settings Section */}
+        <TouchableOpacity
+          style={styles.section}
+          onPress={() => toggleSection('account')}
+          activeOpacity={0.7}
+        >
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionHeaderLeft}>
+              <FontAwesome5 name="lock" size={20} color={Colors.primary} />
+              <Text style={styles.sectionTitle}>Account Settings</Text>
+            </View>
+            <FontAwesome5 
+              name={expandedSection === 'account' ? 'chevron-up' : 'chevron-down'} 
+              size={16} 
+              color={Colors.textSecondary} 
+            />
+          </View>
+          {expandedSection === 'account' && (
+            <View style={styles.sectionContent}>
+              {/* Change Password Form */}
+              <View style={styles.passwordSection}>
+                <Text style={styles.passwordSectionTitle}>Change Password</Text>
+
+                <View style={styles.passwordInputContainer}>
+                  <Text style={styles.passwordLabel}>Current Password</Text>
+                  <TextInput
+                    style={styles.passwordInput}
+                    placeholder="Enter current password"
+                    placeholderTextColor={Colors.textSecondary}
+                    value={currentPassword}
+                    onChangeText={setCurrentPassword}
+                    secureTextEntry
+                    autoCapitalize="none"
+                    editable={!changingPassword}
+                  />
+                </View>
+          
+                <View style={styles.passwordInputContainer}>
+                  <Text style={styles.passwordLabel}>New Password</Text>
+                  <TextInput
+                    style={styles.passwordInput}
+                    placeholder="Enter new password (min 6 characters)"
+                    placeholderTextColor={Colors.textSecondary}
+                    value={newPassword}
+                    onChangeText={setNewPassword}
+                    secureTextEntry
+                    autoCapitalize="none"
+                    editable={!changingPassword}
+                  />
+                </View>
+          
+                <View style={styles.passwordInputContainer}>
+                  <Text style={styles.passwordLabel}>Confirm New Password</Text>
+                  <TextInput
+                    style={styles.passwordInput}
+                    placeholder="Confirm new password"
+                    placeholderTextColor={Colors.textSecondary}
+                    value={confirmNewPassword}
+                    onChangeText={setConfirmNewPassword}
+                    secureTextEntry
+                    autoCapitalize="none"
+                    editable={!changingPassword}
+                  />
+                </View>
+          
+                <TouchableOpacity
+                  style={[styles.changePasswordButton, changingPassword && styles.buttonDisabled]}
+                  onPress={handleChangePassword}
+                  disabled={changingPassword}
+                >
+                  <FontAwesome5 name="key" size={16} color="#FFF" />
+                  <Text style={styles.changePasswordButtonText}>
+                    {changingPassword ? 'Changing Password...' : 'Change Password'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+          
+              {/* Divider */}
+              <View style={styles.accountDivider} />
+          
+              {/* Delete Account */}
+              <View style={styles.deleteSection}>
+                <Text style={styles.deleteSectionTitle}>Danger Zone</Text>
+                <Text style={styles.deleteSectionDescription}>
+                  Permanently delete your account and all associated data. This action cannot be undone.
+                </Text>
+                <TouchableOpacity 
+                  style={styles.deleteAccountButton} 
+                  onPress={handleDeleteAccount}
+                  activeOpacity={0.7}
+                >
+                  <FontAwesome5 name="user-times" size={16} color="#FFF" />
+                  <Text style={styles.deleteAccountText}>Delete Account</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -654,6 +796,87 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     gap: 10,
+    borderWidth: 2,
+    borderColor: '#600000',
+  },
+  deleteAccountText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  passwordSection: {
+    marginTop: 8,
+  },
+  passwordSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 16,
+  },
+  passwordInputContainer: {
+    marginBottom: 16,
+  },
+  passwordLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 8,
+  },
+  passwordInput: {
+    backgroundColor: Colors.background,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: Colors.text,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  changePasswordButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primary,
+    paddingVertical: 14,
+    borderRadius: 8,
+    gap: 8,
+    marginTop: 8,
+  },
+  changePasswordButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  accountDivider: {
+    height: 1,
+    backgroundColor: Colors.border,
+    marginVertical: 24,
+  },
+  deleteSection: {
+    marginBottom: 8,
+  },
+  deleteSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.error,
+    marginBottom: 8,
+  },
+  deleteSectionDescription: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  deleteAccountButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#8B0000',
+    paddingVertical: 14,
+    borderRadius: 8,
+    gap: 8,
     borderWidth: 2,
     borderColor: '#600000',
   },

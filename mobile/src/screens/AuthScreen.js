@@ -10,11 +10,13 @@ import {
   ScrollView,
   Alert,
   Linking,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import Colors from '../constants/colors';
+import { forgotPassword } from '../api/auth';
 
 const AuthScreen = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -23,6 +25,9 @@ const AuthScreen = () => {
   const [fullName, setFullName] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
 
   const { login, register } = useAuth();
 
@@ -75,6 +80,37 @@ const AuthScreen = () => {
     setPassword('');
     setFullName('');
     setAcceptedTerms(false);
+  };
+
+  const handleForgotPassword = async () => {
+    if (!forgotPasswordEmail.trim()) {
+      Alert.alert('Error', 'Please enter your email address');
+      return;
+    }
+
+    setForgotPasswordLoading(true);
+
+    try {
+      await forgotPassword(forgotPasswordEmail.toLowerCase().trim());
+
+      Alert.alert(
+        'Check Your Email',
+        'If an account exists with this email, a temporary password has been sent. Please check your inbox and login with the temporary password.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowForgotPassword(false);
+              setForgotPasswordEmail('');
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      Alert.alert('Error', error.message || 'Failed to send reset email');
+    } finally {
+      setForgotPasswordLoading(false);
+    }
   };
 
   const openTermsAndConditions = () => {
@@ -200,9 +236,74 @@ const AuthScreen = () => {
                   : 'Already have an account? Login'}
               </Text>
             </TouchableOpacity>
+
+            {isLogin && (
+              <TouchableOpacity
+                style={styles.forgotPasswordButton}
+                onPress={() => setShowForgotPassword(true)}
+                disabled={loading}
+              >
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Forgot Password Modal */}
+      <Modal
+        visible={showForgotPassword}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowForgotPassword(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Forgot Password</Text>
+              <TouchableOpacity onPress={() => setShowForgotPassword(false)}>
+                <FontAwesome5 name="times" size={24} color={Colors.text} />
+              </TouchableOpacity>
+            </View>
+                
+            <Text style={styles.modalDescription}>
+              Enter your email address and we'll send you a temporary password.
+            </Text>
+                
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your email"
+                value={forgotPasswordEmail}
+                onChangeText={setForgotPasswordEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+                editable={!forgotPasswordLoading}
+              />
+            </View>
+                
+            <TouchableOpacity
+              style={[styles.button, forgotPasswordLoading && styles.buttonDisabled]}
+              onPress={handleForgotPassword}
+              disabled={forgotPasswordLoading}
+            >
+              <Text style={styles.buttonText}>
+                {forgotPasswordLoading ? 'Sending...' : 'Send Temporary Password'}
+              </Text>
+            </TouchableOpacity>
+                
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setShowForgotPassword(false)}
+              disabled={forgotPasswordLoading}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -317,6 +418,61 @@ const styles = StyleSheet.create({
   },
   toggleText: {
     color: Colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  forgotPasswordButton: {
+    marginTop: 12,
+    alignItems: 'center',
+  },
+  forgotPasswordText: {
+    color: Colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: Colors.text,
+  },
+  modalDescription: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  cancelButton: {
+    marginTop: 12,
+    padding: 12,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: Colors.textSecondary,
     fontSize: 14,
     fontWeight: '600',
   },

@@ -13,6 +13,7 @@ from redis import Redis
 from config import config
 from app.utils.logger import setup_logger
 import click
+from app.utils.email import mail
 
 # Initialize extensions
 db = SQLAlchemy()
@@ -48,6 +49,9 @@ def create_app(config_name=None):
     jwt.init_app(app)
     cache.init_app(app)
     csrf.init_app(app)
+    
+    # Initialize Flask-Mail
+    mail.init_app(app)
     
     app.config['RATELIMIT_STORAGE_URI'] = app.config['RATELIMIT_STORAGE_URL']
     limiter.init_app(app)

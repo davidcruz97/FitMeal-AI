@@ -316,3 +316,145 @@ def list_users():
     except Exception as e:
         logger.error(f"❌ Failed to list users: {e}", exc_info=True)
         return jsonify({'error': f'Failed to list users: {str(e)}'}), 500
+    
+@bp.route('/forgot-password', methods=['POST'])
+@limiter.limit("3 per hour")  # Prevent abuse
+def forgot_password():
+    """
+    Send temporary password to user's email
+    
+    Request body:
+    {
+        "email": "user@example.com"
+    }
+    """
+    logger = current_app.logger
+    
+    try:
+        data = request.get_json()
+        
+        if not data:
+            logger.warning("❌ Forgot password attempt with no data")
+            return jsonify({'error': 'No data provided'}), 400
+        
+        email = data.get('email', '').strip().lower()
+        
+        if not email:
+            logger.warning("❌ Forgot password: Missing email")
+            return jsonify({'error': 'Email is required'}), 400
+        
+        logger.info(f"🔑 Forgot password request for: {email}")
+        
+        # Find user
+        user = User.query.filter_by(email=email).first()
+        
+        if not user:
+            # Don't reveal if email exists (security best practice)
+            logger.info(f"⚠️ Forgot password: Email not found: {email}")
+            return jsonify({
+                'message': 'If this email exists, a temporary password has been sent.'
+            }), 200
+        
+        if not user.is_active:
+            logger.warning(f"🚫 Forgot password: Account disabled for {email}")
+            return jsonify({'error': 'Account is disabled'}), 403
+        
+        # Generate temporary password
+        from app.utils.email import generate_temporary_password, send_password_reset_email
+        
+        temporary_password = generate_temporary_password(6)
+        
+        # Update user's password
+        user.set_password(temporary_password)
+        db.session.commit()
+        
+        # Send email with temporary password
+        try:
+            send_password_reset_email(user, temporary_password)
+            logger.info(f"✅ Temporary password sent to: {email}")
+        except Exception as e:
+            logger.error(f"❌ Failed to send email to {email}: {e}")
+            # Rollback password change if email fails
+            db.session.rollback()
+            return jsonify({'error': 'Failed to send email. Please try again later.'}), 500
+        
+        return jsonify({
+            'message': 'If this email exists, a temporary password has been sent.'
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"❌ Forgot password error: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to process request'}), 500
+
+
+@bp.route('/change-password', methods=['POST'])
+@jwt_required()
+@limiter.limit("5 per hour")  # Prevent brute force
+def change_password():
+    """
+    Change user's password (requires authentication)
+    
+    Headers:
+        Authorization: Bearer <access_token>
+    
+    Request body:
+    {
+        "current_password": "oldpassword123",
+        "new_password": "newpassword123"
+    }
+    """
+    logger = current_app.logger
+    
+    try:
+        user_id = int(get_jwt_identity())
+        user = User.query.get(user_id)
+        
+        if not user:
+            logger.warning(f"⚠️ Change password: User not found (ID: {user_id})")
+            return jsonify({'error': 'User not found'}), 404
+        
+        data = request.get_json()
+        
+        if not data:
+            logger.warning(f"❌ Change password: No data provided for user {user.email}")
+            return jsonify({'error': 'No data provided'}), 400
+        
+        current_password = data.get('current_password', '')
+        new_password = data.get('new_password', '')
+        
+        logger.info(f"🔑 Password change request for: {user.email} (ID: {user_id})")
+        
+        # Validation
+        if not current_password or not new_password:
+            logger.warning(f"❌ Change password: Missing passwords for {user.email}")
+            return jsonify({'error': 'Current password and new password are required'}), 400
+        
+        if len(new_password) < 6:
+            logger.warning(f"❌ Change password: Weak password for {user.email}")
+            return jsonify({'error': 'New password must be at least 6 characters'}), 400
+        
+        # Verify current password
+        if not user.check_password(current_password):
+            logger.warning(f"❌ Change password: Invalid current password for {user.email}")
+            return jsonify({'error': 'Current password is incorrect'}), 401
+        
+        # Check if new password is same as current
+        if current_password == new_password:
+            logger.warning(f"❌ Change password: New password same as current for {user.email}")
+            return jsonify({'error': 'New password must be different from current password'}), 400
+        
+        # Update password
+        user.set_password(new_password)
+        db.session.commit()
+        
+        logger.info(f"✅ Password changed successfully for: {user.email} (ID: {user_id})")
+        
+        return jsonify({
+            'message': 'Password changed successfully'
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"❌ Change password error: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to change password'}), 500

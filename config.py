@@ -47,12 +47,6 @@ class Config:
     UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'app/static/uploads')
     ALLOWED_EXTENSIONS = set(os.getenv('ALLOWED_EXTENSIONS', 'jpg,jpeg,png,webp').split(','))
     
-    # YOLOv8 Configuration
-    YOLO_MODEL_PATH = os.getenv('YOLO_MODEL_PATH', 'app/vision/models/yolov8n.pt')
-    YOLO_CONF_THRESHOLD = float(os.getenv('YOLO_CONF_THRESHOLD', 0.25))
-    YOLO_MAX_DET = int(os.getenv('YOLO_MAX_DET', 10))
-    YOLO_IMG_SIZE = 640  # Max image size for processing
-    
     # USDA API Configuration
     USDA_API_KEY = os.getenv('USDA_API_KEY', '')
     USDA_API_URL = os.getenv('USDA_API_URL', 'https://api.nal.usda.gov/fdc/v1')
@@ -65,6 +59,17 @@ class Config:
     # Pagination
     ITEMS_PER_PAGE = 20
     MAX_ITEMS_PER_PAGE = 100
+    
+    # Email Configuration
+    MAIL_SERVER = os.getenv('MAIL_SERVER', 'smtp.hostinger.com')
+    MAIL_PORT = int(os.getenv('MAIL_PORT', 465))
+    MAIL_USE_SSL = os.getenv('MAIL_USE_SSL', 'True').lower() == 'true'
+    MAIL_USE_TLS = os.getenv('MAIL_USE_TLS', 'False').lower() == 'true'
+    MAIL_USERNAME = os.getenv('MAIL_USERNAME')
+    MAIL_PASSWORD = os.getenv('MAIL_PASSWORD')
+    MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER')
+    MAIL_MAX_EMAILS = None
+    MAIL_ASCII_ATTACHMENTS = False
 
 
 class DevelopmentConfig(Config):

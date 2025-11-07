@@ -56,3 +56,28 @@ export const deleteAccount = async () => {
     throw error;
   }
 };
+
+// Forgot password - sends temporary password to email
+export const forgotPassword = async (email) => {
+  try {
+    const response = await apiClient.post('/auth/forgot-password', {
+      email,
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Change password - requires authentication
+export const changePassword = async (currentPassword, newPassword) => {
+  try {
+    const response = await apiClient.post('/auth/change-password', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};

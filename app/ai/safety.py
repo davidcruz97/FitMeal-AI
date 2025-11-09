@@ -13,9 +13,11 @@ class NutritionSafety:
     # General AI disclaimer
     GENERAL_DISCLAIMER = """
 
-⚠️ Important Disclaimer:
-This advice is AI-generated and for informational purposes only. It does NOT replace professional medical or nutritional guidance.
-"""
+    ⚠️ Important Disclaimer:
+    This advice is AI-generated and for informational purposes only. It does NOT replace professional medical or nutritional guidance.
+
+    📚 See "Sources" tab for the information based on established nutrition science.
+    """
     
     # Medical condition-specific warnings
     MEDICAL_WARNINGS = {

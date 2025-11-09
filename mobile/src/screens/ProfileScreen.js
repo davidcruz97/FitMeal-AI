@@ -418,6 +418,15 @@ const ProfileScreen = () => {
                 </View>
               )}
             </TouchableOpacity>
+            {/* Re-configure Profile Button */}
+            <TouchableOpacity
+              style={styles.reconfigureButton}
+              onPress={handleRerunOnboarding}
+              activeOpacity={0.7}
+            >
+              <FontAwesome5 name="sync-alt" size={18} color={Colors.primary} />
+              <Text style={styles.reconfigureButtonText}>Update My Profile</Text>
+            </TouchableOpacity>
           </>
         ) : (
           <View style={styles.incompleteSection}>
@@ -482,15 +491,6 @@ const ProfileScreen = () => {
         >
           <FontAwesome5 name="sign-out-alt" size={18} color="#FFF" />
           <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-        {/* Re-configure Profile Button */}
-        <TouchableOpacity
-          style={styles.reconfigureButton}
-          onPress={handleRerunOnboarding}
-          activeOpacity={0.7}
-        >
-          <FontAwesome5 name="sync-alt" size={18} color={Colors.primary} />
-          <Text style={styles.reconfigureButtonText}>Update My Profile</Text>
         </TouchableOpacity>
 
         {/* Account Settings Section */}

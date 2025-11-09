@@ -11,22 +11,27 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { askNutritionQuestion, explainMacro, warmupAI } from '../api/ai';
 import Colors from '../constants/colors';
+import { WebView } from 'react-native-webview';
 
 const AIAssistantScreen = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('ale'); // 'ale' or 'learn'
+  const [activeTab, setActiveTab] = useState('ale'); // 'ale', 'learn', or 'sources'
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
   const [aiWarming, setAiWarming] = useState(true); // Start as true
   const [warmupPhrase, setWarmupPhrase] = useState('');
   const scrollViewRef = useRef(null);
+  const [showBrowser, setShowBrowser] = useState(false);
+  const [browserUrl, setBrowserUrl] = useState('');
+  const [browserTitle, setBrowserTitle] = useState('');
 
   // Motivational phrases for warmup
   const warmupPhrases = [
@@ -373,6 +378,88 @@ const AIAssistantScreen = () => {
     );
   };
 
+  const renderSourcesTab = () => {
+    const sources = [
+      {
+        id: 'usda',
+        name: 'USDA Dietary Guidelines',
+        icon: 'leaf',
+        color: '#4CAF50',
+        description: 'Official dietary guidelines for Americans',
+        url: 'https://www.dietaryguidelines.gov',
+      },
+      {
+        id: 'who',
+        name: 'WHO Nutrition',
+        icon: 'globe',
+        color: '#2196F3',
+        description: 'World Health Organization nutrition recommendations',
+        url: 'https://www.who.int/health-topics/nutrition',
+      },
+      {
+        id: 'and',
+        name: 'Academy of Nutrition',
+        icon: 'user-md',
+        color: '#9C27B0',
+        description: 'Evidence-based nutrition practice guidelines',
+        url: 'https://www.eatright.org',
+      },
+      {
+        id: 'usda-db',
+        name: 'USDA Food Database',
+        icon: 'database',
+        color: '#795548',
+        description: 'Nutritional data for ingredients and foods',
+        url: 'https://fdc.nal.usda.gov',
+      },
+    ];
+
+    return (
+      <ScrollView style={styles.tabContent} contentContainerStyle={styles.sourcesContent}>
+        <View style={styles.sourcesHeader}>
+          <FontAwesome5 name="book-medical" size={32} color={Colors.primary} />
+          <Text style={styles.sourcesTitle}>Medical & Nutrition Sources</Text>
+          <Text style={styles.sourcesSubtitle}>
+            All nutrition information and recommendations are based on established scientific research from these trusted sources:
+          </Text>
+        </View>
+
+        <View style={styles.sourcesGrid}>
+          {sources.map((source) => (
+            <TouchableOpacity
+              key={source.id}
+              style={[styles.sourceCard, { borderColor: source.color }]}
+              onPress={() => {
+                setBrowserUrl(source.url);
+                setBrowserTitle(source.name);
+                setShowBrowser(true);
+              }}
+              disabled={loading}
+            >
+              <View style={[styles.sourceIcon, { backgroundColor: source.color + '20' }]}>
+                <FontAwesome5 name={source.icon} size={24} color={source.color} solid />
+              </View>
+              <Text style={styles.sourceName}>{source.name}</Text>
+              <Text style={styles.sourceDescription}>{source.description}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <View style={styles.disclaimerCard}>
+          <FontAwesome5 name="exclamation-triangle" size={20} color="#FF9800" />
+          <Text style={styles.disclaimerTitle}>Important Notice</Text>
+          <Text style={styles.disclaimerText}>
+            Ale provides AI-generated nutrition information based on these scientific sources for educational purposes only.
+            {'\n\n'}
+            This does NOT replace professional medical advice, diagnosis, or treatment. Always consult with a registered dietitian, nutritionist, or healthcare provider for personalized guidance.
+            {'\n\n'}
+            BMR and macro calculations use validated formulas (Mifflin-St Jeor, Harris-Benedict) but individual needs vary based on metabolism, genetics, and health status.
+          </Text>
+        </View>
+      </ScrollView>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={[]}>
       {aiWarming ? (
@@ -416,7 +503,7 @@ const AIAssistantScreen = () => {
                   Ale
                 </Text>
               </TouchableOpacity>
-
+                
               <TouchableOpacity
                 style={[styles.tab, activeTab === 'learn' && styles.activeTab]}
                 onPress={() => setActiveTab('learn')}
@@ -436,13 +523,79 @@ const AIAssistantScreen = () => {
                   Learn
                 </Text>
               </TouchableOpacity>
+                
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'sources' && styles.activeTab]}
+                onPress={() => setActiveTab('sources')}
+              >
+                <FontAwesome5
+                  name="book-medical"
+                  size={16}
+                  color={activeTab === 'sources' ? Colors.primary : Colors.textSecondary}
+                  solid
+                />
+                <Text
+                  style={[
+                    styles.tabText,
+                    activeTab === 'sources' && styles.activeTabText,
+                  ]}
+                >
+                  Sources
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
 
           {/* Tab Content */}
-          {activeTab === 'ale' ? renderAleTab() : renderLearnTab()}
+          {activeTab === 'ale' ? renderAleTab() : activeTab === 'learn' ? renderLearnTab() : renderSourcesTab()}
         </>
       )}
+
+      {/* In-App Browser Modal */}
+      <Modal
+        visible={showBrowser}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setShowBrowser(false)}
+      >
+        <View style={styles.browserContainer}>
+          {/* Browser Header */}
+          <View style={styles.browserHeader}>
+            <TouchableOpacity
+              style={styles.browserCloseButton}
+              onPress={() => {
+                setShowBrowser(false);
+                setBrowserUrl('');
+                setBrowserTitle('');
+              }}
+              activeOpacity={0.7}
+            >
+              <FontAwesome5 name="times" size={24} color={Colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.browserTitle} numberOfLines={1}>
+              {browserTitle}
+            </Text>
+            <View style={styles.browserPlaceholder} />
+          </View>
+            
+          {/* WebView */}
+          <WebView
+            source={{ uri: browserUrl }}
+            style={styles.webview}
+            startInLoadingState={true}
+            renderLoading={() => (
+              <View style={styles.webviewLoading}>
+                <ActivityIndicator size="large" color={Colors.primary} />
+                <Text style={styles.webviewLoadingText}>Loading...</Text>
+              </View>
+            )}
+            onError={(syntheticEvent) => {
+              const { nativeEvent } = syntheticEvent;
+              console.warn('WebView error: ', nativeEvent);
+            }}
+          />
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -794,6 +947,147 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
     textAlign: 'center',
+  },
+  sourcesContent: {
+    padding: 20,
+  },
+  sourcesHeader: {
+    alignItems: 'center',
+    marginBottom: 32,
+    gap: 12,
+  },
+  sourcesTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: Colors.text,
+    textAlign: 'center',
+  },
+  sourcesSubtitle: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+    lineHeight: 20,
+  },
+  sourcesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  sourceCard: {
+    width: '47%',
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    minHeight: 160,
+  },
+  sourceIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sourceName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text,
+    textAlign: 'center',
+  },
+  sourceDescription: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  disclaimerCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF9800',
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  disclaimerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.text,
+  },
+  disclaimerText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+  },
+  browserContainer: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    paddingTop: Platform.OS === 'ios' ? 50 : 0, 
+  },
+  browserHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: Colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  browserCloseButton: {
+    padding: 8,
+    width: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  browserTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    textAlign: 'center',
+    paddingHorizontal: 8,
+  },
+  browserPlaceholder: {
+    width: 50,
+  },
+  webview: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  webviewLoading: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+    gap: 16,
+  },
+  webviewLoadingText: {
+    fontSize: 16,
+    color: Colors.textSecondary,
   },
 });
 

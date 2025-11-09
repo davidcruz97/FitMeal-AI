@@ -69,6 +69,14 @@ const RecipeDetailScreen = ({ route }) => {
               servings={1}
               showTitle={true}
             />
+
+            {/* Nutrition Data Source Citation */}
+            <View style={styles.nutritionCitation}>
+              <FontAwesome5 name="database" size={12} color={Colors.textSecondary} />
+              <Text style={styles.nutritionCitationText}>
+                Data calculated using USDA FoodData Central Database
+              </Text>
+            </View>
           </View>
         )}
 
@@ -190,6 +198,22 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  nutritionCitation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  nutritionCitationText: {
+    flex: 1,
+    fontSize: 11,
+    color: Colors.textSecondary,
+    fontStyle: 'italic',
+    lineHeight: 16,
   },
 });
 

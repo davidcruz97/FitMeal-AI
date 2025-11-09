@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -180,6 +181,58 @@ const HomeScreen = () => {
             <Text style={styles.emptyText}>No meals logged yet today</Text>
           </View>
         )}
+      </View>
+
+      {/* Data Sources Card */}
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Our Data Sources</Text>
+          <FontAwesome5 name="book-medical" size={18} color={Colors.primary} />
+        </View>
+            
+        <Text style={styles.sourcesDescription}>
+          All nutrition information is based on trusted scientific sources:
+        </Text>
+            
+        <View style={styles.sourceItem}>
+          <View style={styles.sourceIconContainer}>
+            <FontAwesome5 name="leaf" size={16} color="#4CAF50" solid />
+          </View>
+          <View style={styles.sourceInfo}>
+            <Text style={styles.sourceName}>USDA Dietary Guidelines</Text>
+            <Text style={styles.sourceUrl}>dietaryguidelines.gov</Text>
+          </View>
+        </View>
+            
+        <View style={styles.sourceItem}>
+          <View style={styles.sourceIconContainer}>
+            <FontAwesome5 name="globe" size={16} color="#2196F3" solid />
+          </View>
+          <View style={styles.sourceInfo}>
+            <Text style={styles.sourceName}>WHO Nutrition</Text>
+            <Text style={styles.sourceUrl}>who.int/nutrition</Text>
+          </View>
+        </View>
+            
+        <View style={styles.sourceItem}>
+          <View style={styles.sourceIconContainer}>
+            <FontAwesome5 name="user-md" size={16} color="#9C27B0" solid />
+          </View>
+          <View style={styles.sourceInfo}>
+            <Text style={styles.sourceName}>Academy of Nutrition</Text>
+            <Text style={styles.sourceUrl}>eatright.org</Text>
+          </View>
+        </View>
+            
+        <View style={styles.sourceItem}>
+          <View style={styles.sourceIconContainer}>
+            <FontAwesome5 name="database" size={16} color="#795548" solid />
+          </View>
+          <View style={styles.sourceInfo}>
+            <Text style={styles.sourceName}>USDA Food Database</Text>
+            <Text style={styles.sourceUrl}>fdc.nal.usda.gov</Text>
+          </View>
+        </View>
       </View>
       </ScrollView>
     </SafeAreaView>
@@ -363,6 +416,63 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.text,
     textAlign: 'center',
+  },
+  sourcesDescription: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  sourceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    gap: 12,
+    borderRadius: 8,
+    backgroundColor: Colors.background,
+    marginBottom: 8,
+  },
+  sourceIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  sourceInfo: {
+    flex: 1,
+  },
+  sourceName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 2,
+  },
+  sourceUrl: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  viewAllSourcesButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 8,
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    gap: 8,
+  },
+  viewAllSourcesText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.primary,
   },
 });
 

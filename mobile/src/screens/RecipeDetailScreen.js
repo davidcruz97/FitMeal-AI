@@ -14,10 +14,12 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import MacroDisplay from '../components/MacroDisplay';
 import Colors from '../constants/colors';
+import { useAuth } from '../context/AuthContext';
 
 const RecipeDetailScreen = ({ route }) => {
   const navigation = useNavigation();
   const { recipe } = route.params;
+  const { isGuest } = useAuth();
 
   // Construct full image URL
   const getImageUrl = (imageUrl) => {
@@ -105,9 +107,25 @@ const RecipeDetailScreen = ({ route }) => {
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.logButton} onPress={handleLogMeal}>
-          <Text style={styles.logButtonText}>Log This Meal</Text>
-        </TouchableOpacity>
+        {isGuest ? (
+          <View style={styles.guestPrompt}>
+            <FontAwesome5 name="lock" size={24} color={Colors.primary} />
+            <Text style={styles.guestPromptTitle}>Sign up to log meals</Text>
+            <Text style={styles.guestPromptText}>
+              Create a free account to track your meals and nutrition
+            </Text>
+            <TouchableOpacity 
+              style={styles.signUpButton} 
+              onPress={() => navigation.navigate('Profile')}
+            >
+              <Text style={styles.signUpButtonText}>Create Account</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity style={styles.logButton} onPress={handleLogMeal}>
+            <Text style={styles.logButtonText}>Log This Meal</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -214,6 +232,37 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontStyle: 'italic',
     lineHeight: 16,
+  },
+  guestPrompt: {
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 8,
+  },
+  guestPromptTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.text,
+    marginTop: 8,
+  },
+  guestPromptText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
+  signUpButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    marginTop: 8,
+    width: '100%',
+  },
+  signUpButtonText: {
+    color: Colors.textLight,
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });
 

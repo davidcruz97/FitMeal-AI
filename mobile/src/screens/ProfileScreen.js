@@ -376,7 +376,7 @@ const ProfileScreen = () => {
             >
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionHeaderLeft}>
-                  <FontAwesome5 name="apple-alt" size={20} color={Colors.primary} />
+                  <FontAwesome5 name="calculator" size={20} color={Colors.primary} />
                   <Text style={styles.sectionTitle}>Nutrition Targets</Text>
                 </View>
                 <FontAwesome5 
@@ -388,36 +388,36 @@ const ProfileScreen = () => {
               {expandedSection === 'nutrition' && (
                 <View style={styles.sectionContent}>
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>BMR:</Text>
-                    <Text style={styles.infoValue}>{nutritionTargets.bmr || '--'} kcal</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>TDEE:</Text>
-                    <Text style={styles.infoValue}>{nutritionTargets.tdee || '--'} kcal</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Target Calories:</Text>
+                    <Text style={styles.infoLabel}>Calories</Text>
                     <Text style={styles.infoValue}>{nutritionTargets.calories || '--'} kcal</Text>
                   </View>
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Protein:</Text>
+                    <Text style={styles.infoLabel}>Protein</Text>
                     <Text style={styles.infoValue}>{nutritionTargets.protein || '--'}g</Text>
                   </View>
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Carbs:</Text>
+                    <Text style={styles.infoLabel}>Carbs</Text>
                     <Text style={styles.infoValue}>{nutritionTargets.carbs || '--'}g</Text>
                   </View>
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Fats:</Text>
+                    <Text style={styles.infoLabel}>Fats</Text>
                     <Text style={styles.infoValue}>{nutritionTargets.fats || '--'}g</Text>
                   </View>
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Water:</Text>
-                    <Text style={styles.infoValue}>{nutritionTargets.water || '--'}ml</Text>
+                    <Text style={styles.infoLabel}>Water</Text>
+                    <Text style={styles.infoValue}>{nutritionTargets.water || '--'} ml</Text>
+                  </View>
+
+                  <View style={styles.nutritionCitation}>
+                    <FontAwesome5 name="database" size={12} color={Colors.textSecondary} />
+                    <Text style={styles.nutritionCitationText}>
+                      BMR and macro calculations use validated formulas (Mifflin-St Jeor, Harris-Benedict) but individual needs vary based on metabolism, genetics, and health status.
+                    </Text>
                   </View>
                 </View>
               )}
             </TouchableOpacity>
+
             {/* Re-configure Profile Button */}
             <TouchableOpacity
               style={styles.reconfigureButton}
@@ -884,6 +884,22 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  nutritionCitation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  nutritionCitationText: {
+    flex: 1,
+    fontSize: 11,
+    color: Colors.textSecondary,
+    fontStyle: 'italic',
+    lineHeight: 16,
   },
 });
 

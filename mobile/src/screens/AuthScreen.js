@@ -28,8 +28,7 @@ const AuthScreen = () => {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
-
-  const { login, register } = useAuth();
+  const { login, register, loginAsGuest } = useAuth();
 
   const handleSubmit = async () => {
     // Validation
@@ -246,6 +245,27 @@ const AuthScreen = () => {
                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
               </TouchableOpacity>
             )}
+
+            {/* Continue as Guest Button */}
+            <TouchableOpacity
+              style={styles.guestButton}
+              onPress={async () => {
+                setLoading(true);
+                const result = await loginAsGuest();
+                setLoading(false);
+                if (!result.success) {
+                  Alert.alert('Error', result.message);
+                }
+              }}
+              disabled={loading}
+            >
+              <FontAwesome5 name="user" size={16} color={Colors.textSecondary} />
+              <Text style={styles.guestButtonText}>Continue as Guest</Text>
+            </TouchableOpacity>
+            
+            <Text style={styles.guestDisclaimer}>
+              Guest mode lets you explore the app. Sign up to save your data and track progress.
+            </Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -475,6 +495,31 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontSize: 14,
     fontWeight: '600',
+  },
+  guestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: 'transparent',
+  },
+  guestButtonText: {
+    color: Colors.textSecondary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  guestDisclaimer: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 12,
+    paddingHorizontal: 20,
+    lineHeight: 18,
   },
 });
 

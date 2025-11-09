@@ -37,11 +37,16 @@ import WorkoutDaysScreen from '../screens/onboarding/WorkoutDaysScreen';
 import OnboardingProcessingScreen from '../screens/onboarding/OnboardingProcessingScreen';
 import OnboardingResultsScreen from '../screens/onboarding/OnboardingResultsScreen';
 
+// Guest Screens
+import GuestHomeScreen from '../screens/GuestHomeScreen';
+import GuestProfileScreen from '../screens/GuestProfileScreen';
+
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Tab Navigator for authenticated users
 const MainTabs = () => {
+  const { isGuest } = useAuth();
+  
   return (
     <Tab.Navigator
       screenOptions={{
@@ -72,9 +77,10 @@ const MainTabs = () => {
         },
       }}
     >
+      {/* Home tab - available to all */}
       <Tab.Screen
         name="Home"
-        component={HomeScreen}
+        component={isGuest ? GuestHomeScreen : HomeScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
             <FontAwesome5 name="home" size={20} color={color} />
@@ -82,16 +88,22 @@ const MainTabs = () => {
           title: 'Home',
         }}
       />
-      <Tab.Screen
-        name="Camera"
-        component={CameraScreen}
-        options={{
-          tabBarIcon: ({ color, size }) => (
-            <FontAwesome5 name="camera" size={20} color={color} solid />
-          ),
-          title: 'AI-Scan',
-        }}
-      />
+      
+      {/* Camera tab - only for logged-in users */}
+      {!isGuest && (
+        <Tab.Screen
+          name="Camera"
+          component={CameraScreen}
+          options={{
+            tabBarIcon: ({ color, size }) => (
+              <FontAwesome5 name="camera" size={20} color={color} solid />
+            ),
+            title: 'AI-Scan',
+          }}
+        />
+      )}
+      
+      {/* AI tab - available to all */}
       <Tab.Screen
         name="AI"
         component={AIAssistantScreen}
@@ -102,19 +114,25 @@ const MainTabs = () => {
           title: 'AI-Assistant',
         }}
       />
-      <Tab.Screen
-        name="History"
-        component={HistoryScreen}
-        options={{
-          tabBarIcon: ({ color, size }) => (
-            <FontAwesome5 name="chart-bar" size={20} color={color} />
-          ),
-          title: 'History',
-        }}
-      />
+      
+      {/* History tab - only for logged-in users */}
+      {!isGuest && (
+        <Tab.Screen
+          name="History"
+          component={HistoryScreen}
+          options={{
+            tabBarIcon: ({ color, size }) => (
+              <FontAwesome5 name="chart-bar" size={20} color={color} />
+            ),
+            title: 'History',
+          }}
+        />
+      )}
+      
+      {/* Profile tab */}
       <Tab.Screen
         name="Profile"
-        component={ProfileScreen}
+        component={isGuest ? GuestProfileScreen : ProfileScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
             <FontAwesome5 name="user" size={20} color={color} solid />

@@ -13,6 +13,7 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [initialData, setInitialData] = useState(null);
+  const [isGuest, setIsGuest] = useState(false);
 
   // Check if user is already logged in on app start
   useEffect(() => {
@@ -167,6 +168,33 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Add guest login function after the register function
+  const loginAsGuest = async () => {
+    try {
+      // Create a temporary guest user object
+      const guestUser = {
+        id: 'guest',
+        email: 'guest@fitmeal.app',
+        full_name: 'Guest User',
+        profile_completed: true,
+        is_guest: true,
+      };
+
+      setUser(guestUser);
+      setIsGuest(true);
+      setIsAuthenticated(true);
+      setIsLoading(false);
+
+      return { success: true };
+    } catch (error) {
+      console.error('Guest login error:', error);
+      return {
+        success: false,
+        message: 'Failed to continue as guest',
+      };
+    }
+  };
+
   const refreshUser = async () => {
     try {
       const token = await getToken();
@@ -204,6 +232,7 @@ export const AuthProvider = ({ children }) => {
       await clearStorage();
       setUser(null);
       setIsAuthenticated(false);
+      setIsGuest(false);
       setInitialData(null);
       // Note: isLoading stays false, so auth screen shows immediately
     } catch (error) {
@@ -215,10 +244,12 @@ export const AuthProvider = ({ children }) => {
     user,
     isLoading,
     isAuthenticated,
+    isGuest,
     initialData,
     clearInitialData,
     login,
     register,
+    loginAsGuest,
     logout,
     refreshUser,
   };

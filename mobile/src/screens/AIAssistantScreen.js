@@ -18,10 +18,12 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { askNutritionQuestion, explainMacro, warmupAI } from '../api/ai';
 import Colors from '../constants/colors';
+import { useNavigation } from '@react-navigation/native';
 import { WebView } from 'react-native-webview';
 
 const AIAssistantScreen = () => {
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
+  const navigation = useNavigation();
   const [activeTab, setActiveTab] = useState('ale'); // 'ale', 'learn', or 'sources'
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
@@ -110,6 +112,18 @@ const AIAssistantScreen = () => {
   }, [activeTab]);
 
   const handleSendMessage = async (questionText = null) => {
+    if (isGuest && messages.length >= 3) {
+      Alert.alert(
+        'Sign Up to Continue',
+        'Create a free account to continue chatting with Ale!',
+        [
+          { text: 'Not Now', style: 'cancel' },
+          { text: 'Sign Up', onPress: () => navigation.navigate('Profile') },
+        ]
+      );
+      return;
+    }
+
     const question = questionText || inputText.trim();
     
     if (!question) return;
@@ -420,7 +434,7 @@ const AIAssistantScreen = () => {
           <FontAwesome5 name="book-medical" size={32} color={Colors.primary} />
           <Text style={styles.sourcesTitle}>Medical & Nutrition Sources</Text>
           <Text style={styles.sourcesSubtitle}>
-            All nutrition information and recommendations are based on established scientific research from these trusted sources:
+            All nutrition information and recommendations are AI-produced. We recommend consulting the scientific research from these trusted sources:
           </Text>
         </View>
 
@@ -545,6 +559,19 @@ const AIAssistantScreen = () => {
               </TouchableOpacity>
             </View>
           </View>
+
+          {/* Guest Mode Banner */}
+          {isGuest && (
+            <View style={styles.guestBanner}>
+              <FontAwesome5 name="info-circle" size={14} color={Colors.primary} />
+              <Text style={styles.guestBannerText}>
+                Guest Mode Limited
+              </Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+                <Text style={styles.guestBannerLink}>Sign Up</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Tab Content */}
           {activeTab === 'ale' ? renderAleTab() : activeTab === 'learn' ? renderLearnTab() : renderSourcesTab()}
@@ -1088,6 +1115,28 @@ const styles = StyleSheet.create({
   webviewLoadingText: {
     fontSize: 16,
     color: Colors.textSecondary,
+  },
+  guestBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFF3CD',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#FFC107',
+  },
+  guestBannerText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#856404',
+    fontWeight: '600',
+  },
+  guestBannerLink: {
+    fontSize: 13,
+    color: Colors.primary,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
 });
 

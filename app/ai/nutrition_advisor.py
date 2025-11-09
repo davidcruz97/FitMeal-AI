@@ -61,8 +61,10 @@ class NutritionAdvisor:
             
             RESPONSE GUIDELINES:
             1. Respond as Ale naturally in 1-2 short paragraphs (max 100 words). 
-            2. Be conversational, warm, and direct. No headers, no bullet points, just friendly advice. 
-            3. Answer their question directly. No role-playing, no made-up personas, just helpful nutrition advice."""
+            2. Be warm and direct. No headers, no bullet points, just friendly advice. 
+            3. Answer their question directly. No role-playing, no made-up personas, just helpful nutrition advice.
+            4. Provide a short citation of sources if applicable.
+            5. If unsure, admit it and suggest consulting a professional."""
             
             logger.info(f"💬 Answering nutrition question (personalized={bool(context)})")
             logger.debug(f"📝 Prompt length: {len(prompt)} chars")
@@ -222,8 +224,8 @@ Focus on performance and recovery."""
     1. What it is and why it matters
     2. Best food sources
     3. Quick tips for daily intake
-
-    Keep it simple and practical."""
+    4. Provide a short citation of sources if applicable.
+    5. Keep it simple and practical."""
             
             logger.info(f"📚 Explaining macro: {macro_name}")
             

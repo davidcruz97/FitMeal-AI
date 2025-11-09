@@ -6,9 +6,10 @@
 
 FitMeal-AI is a comprehensive mobile-first nutrition assistant that helps users make healthier meal choices through artificial intelligence and computer vision. The application combines ingredient detection from food photos with personalized nutrition planning, real-time meal tracking, and AI-powered coaching to create a complete nutrition management system.
 
-**Status**: Currently under Apple App Store review (submitted November 9)
-**App Store Link**: [Download when approved](https://apps.apple.com/fitmeal-ai)
-**Note for Competition Judges**: The app has been submitted to Apple and is pending review. You can test the backend API at `https://fitmeal.cinturillas247.com/api` and review the complete source code in this repository. App Store approval typically takes 24-48 hours.
+### Status 
+- Currently under Apple App Store review (submitted November 9)
+- **App Store Link**: [Download when approved](https://apps.apple.com/fitmeal-ai)
+- **Note for Competition Judges**: The app has been submitted to Apple and is pending review. You can test the backend API at `https://fitmeal.cinturillas247.com/api` and review the complete source code in this repository. App Store approval typically takes 24-48 hours.
 
 ### Problem Statement
 

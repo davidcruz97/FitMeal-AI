@@ -376,7 +376,7 @@ const ProfileScreen = () => {
             >
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionHeaderLeft}>
-                  <FontAwesome5 name="calculator" size={20} color={Colors.primary} />
+                  <FontAwesome5 name="apple-alt" size={20} color={Colors.primary} />
                   <Text style={styles.sectionTitle}>Nutrition Targets</Text>
                 </View>
                 <FontAwesome5 

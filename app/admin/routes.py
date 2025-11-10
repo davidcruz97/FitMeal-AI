@@ -328,9 +328,14 @@ def recipes():
     
     pagination = query.paginate(page=page, per_page=20, error_out=False)
     
+    # Get all unique categories for filter dropdown
+    categories = db.session.query(Recipe.category).distinct().filter(Recipe.category.isnot(None)).all()
+    categories = [cat[0] for cat in categories]
+    
     return render_template('admin/recipes.html',
                          recipes=pagination.items,
                          pagination=pagination,
+                         categories=categories,
                          category=category,
                          search=search)
 

@@ -479,7 +479,7 @@ const ProfileScreen = () => {
           </View>
           <View style={styles.sectionContent}>
             <Text style={styles.aboutText}>FitMeal AI - AI-Powered Meal Planning</Text>
-            <Text style={styles.aboutVersion}>Version 1.1.0</Text>
+            <Text style={styles.aboutVersion}>Version 1.1.2</Text>
           </View>
         </View>
 

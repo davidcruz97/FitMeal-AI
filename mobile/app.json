@@ -2,7 +2,7 @@
   "expo": {
     "name": "FitMeal AI",
     "slug": "fitmeal-ai",
-    "version": "1.1.0",
+    "version": "1.1.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -17,7 +17,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.cinturillas247.fitmealai",
-      "buildNumber": "2",
+      "buildNumber": "4",
       "infoPlist": {
         "NSCameraUsageDescription": "FitMeal AI needs camera access to detect ingredients in your photos.",
         "NSPhotoLibraryUsageDescription": "FitMeal AI needs photo library access to let you select ingredient photos.",
@@ -30,7 +30,7 @@
         "backgroundColor": "#4CAF50"
       },
       "package": "com.cinturillas247.fitmealai",
-      "versionCode": 2,
+      "versionCode": 3,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",

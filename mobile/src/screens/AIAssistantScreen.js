@@ -252,10 +252,15 @@ const AIAssistantScreen = () => {
             {message.text}
           </Text>
           {!isUser && message.personalized && (
-            <View style={styles.personalizedBadge}>
-              <FontAwesome5 name="user-check" size={10} color={Colors.primary} />
-              <Text style={styles.personalizedText}>Personalized for you</Text>
-            </View>
+            <TouchableOpacity 
+              style={styles.citationReminder}
+              onPress={() => setActiveTab('sources')}
+            >
+              <FontAwesome5 name="external-link-alt" size={10} color={Colors.primary} />
+              <Text style={styles.citationReminderText}>
+                View full citations in Sources tab
+              </Text>
+            </TouchableOpacity>
           )}
         </View>
         
@@ -399,8 +404,24 @@ const AIAssistantScreen = () => {
         name: 'USDA Dietary Guidelines',
         icon: 'leaf',
         color: '#4CAF50',
-        description: 'Official dietary guidelines for Americans',
-        url: 'https://www.dietaryguidelines.gov',
+        description: 'Official dietary guidelines for Americans (2020-2025)',
+        url: 'https://www.dietaryguidelines.gov/sites/default/files/2020-12/Dietary_Guidelines_for_Americans_2020-2025.pdf',
+      },
+      {
+        id: 'issn',
+        name: 'ISSN Protein Guidelines',
+        icon: 'dumbbell',
+        color: '#FF6B6B',
+        description: 'International Society of Sports Nutrition position stand on protein',
+        url: 'https://jissn.biomedcentral.com/articles/10.1186/s12970-017-0177-8',
+      },
+      {
+        id: 'acsm',
+        name: 'ACSM Sports Nutrition',
+        icon: 'running',
+        color: '#4ECDC4',
+        description: 'American College of Sports Medicine nutrition guidelines',
+        url: 'https://journals.lww.com/acsm-msse/pages/default.aspx',
       },
       {
         id: 'who',
@@ -416,7 +437,15 @@ const AIAssistantScreen = () => {
         icon: 'user-md',
         color: '#9C27B0',
         description: 'Evidence-based nutrition practice guidelines',
-        url: 'https://www.eatright.org',
+        url: 'https://www.eatright.org/food/nutrition',
+      },
+      {
+        id: 'nap',
+        name: 'NAP Hydration Guidelines',
+        icon: 'tint',
+        color: '#3498DB',
+        description: 'National Academies Press dietary reference intakes for water',
+        url: 'https://nap.nationalacademies.org/catalog/10925/dietary-reference-intakes-for-water-potassium-sodium-chloride-and-sulfate',
       },
       {
         id: 'usda-db',
@@ -434,7 +463,7 @@ const AIAssistantScreen = () => {
           <FontAwesome5 name="book-medical" size={32} color={Colors.primary} />
           <Text style={styles.sourcesTitle}>Medical & Nutrition Sources</Text>
           <Text style={styles.sourcesSubtitle}>
-            All nutrition information and recommendations are AI-produced. We recommend consulting the scientific research from these trusted sources:
+            Tap any source below to view the full guidelines and research papers that inform Ale's advice.
           </Text>
         </View>
 
@@ -794,20 +823,6 @@ const styles = StyleSheet.create({
   aiMessageText: {
     color: Colors.text,
   },
-  personalizedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  personalizedText: {
-    fontSize: 11,
-    color: Colors.primary,
-    fontWeight: '600',
-  },
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1137,6 +1152,20 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: '600',
     textDecorationLine: 'underline',
+  },
+  citationReminder: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  citationReminderText: {
+    fontSize: 10,
+    color: Colors.primary,
+    fontWeight: '600',
   },
 });
 

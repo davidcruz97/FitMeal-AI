@@ -14,8 +14,6 @@ class NutritionSafety:
     GENERAL_DISCLAIMER = """
 
     ⚠️ Important Disclaimer: This advice is AI-generated and for informational purposes only. It does NOT replace professional medical or nutritional guidance.
-
-    📚 See the "Sources" tab for information based on established nutrition science.
     """
     
     # Medical condition-specific warnings
